@@ -1,6 +1,5 @@
 import { useInView } from '../../hooks/useCountUp'
 import { deltaLabel, formatScore } from '../../utils/format'
-import './charts.css'
 
 type Item = {
   label: string
@@ -18,40 +17,38 @@ export function SmallMultiples({ items, year, previousYear }: Props) {
   const { ref, inView } = useInView<HTMLDivElement>()
 
   return (
-    <div className="small-multiples" ref={ref}>
+    <div className="grid grid-cols-3 gap-4 max-[720px]:grid-cols-1" ref={ref}>
       {items.map((item) => {
         const d = item.score - item.previousScore
+        const tone = d > 0 ? 'text-delta-up' : d < 0 ? 'text-negative' : 'text-muted'
         return (
-          <div className="small-multiples__card" key={item.label}>
-            <p className="small-multiples__title">{item.label}</p>
-            <div className="gbar__bars" style={{ height: '5.5rem' }}>
-              <div className="gbar__col">
-                <span className="gbar__val">{formatScore(item.previousScore)}</span>
+          <div className="border-t border-ink pb-2 pt-1" key={item.label}>
+            <p className="mb-3 mt-0 text-[13.5px] font-medium text-ink-soft">{item.label}</p>
+            <div className="flex h-[88px] items-end gap-[6px] border-b border-line pt-2">
+              <div className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+                <span className="font-mono text-[11px]">{formatScore(item.previousScore)}</span>
                 <div
-                  className={`gbar__bar${inView ? ' is-visible' : ''}`}
+                  className={`gbar-bar w-full max-w-10 border border-series-stroke${inView ? ' is-visible' : ''}`}
                   style={{
                     height: `${item.previousScore}%`,
-                    background: 'var(--series-c)',
+                    background: 'var(--color-series-c)',
                   }}
                   title={`${previousYear}`}
                 />
               </div>
-              <div className="gbar__col">
-                <span className="gbar__val">{formatScore(item.score)}</span>
+              <div className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+                <span className="font-mono text-[11px]">{formatScore(item.score)}</span>
                 <div
-                  className={`gbar__bar${inView ? ' is-visible' : ''}`}
+                  className={`gbar-bar w-full max-w-10 border border-series-stroke${inView ? ' is-visible' : ''}`}
                   style={{
                     height: `${item.score}%`,
-                    background: 'var(--series-b)',
+                    background: 'var(--color-series-b)',
                   }}
                   title={`${year}`}
                 />
               </div>
             </div>
-            <p
-              className={`delta ${d > 0 ? 'delta--up' : d < 0 ? 'delta--down' : 'delta--flat'}`}
-              style={{ margin: '0.5rem 0 0' }}
-            >
+            <p className={`mt-2 mb-0 font-mono text-[13px] ${tone}`}>
               {deltaLabel(item.score, item.previousScore)} vs {previousYear}
             </p>
           </div>

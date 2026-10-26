@@ -1,3 +1,10 @@
+/**
+ * REVIEW — Section nav (chip)
+ * - Chip con bordo; attiva = stroke+testo accent, NON fill rosso pieno.
+ * - Niente underline / border-bottom di selezione.
+ * - Al click: lock activeId durante smooth scroll (altrimenti lo spy la “spegne”).
+ * - sticky top = var(--header-h); padding verticale uguale; non deve finire sotto l’header.
+ */
 import { useEffect, useRef, useState } from 'react'
 
 const links = [
@@ -90,8 +97,12 @@ export function SectionNav() {
   }
 
   return (
-    <nav className="section-nav" aria-label="Sezioni">
-      <div className="section-nav__inner">
+    <nav
+      className="section-nav sticky z-30 border-b border-line bg-bg"
+      style={{ top: 'var(--header-h)' }}
+      aria-label="Sezioni"
+    >
+      <div className="mx-auto box-border flex max-w-report items-center gap-1 overflow-x-auto px-5 py-3 [scrollbar-width:thin]">
         {links.map((link) => {
           const id = link.href.slice(1)
           const isActive = activeId === id
@@ -99,7 +110,11 @@ export function SectionNav() {
             <a
               key={link.href}
               href={link.href}
-              className={`section-nav__link${isActive ? ' is-active' : ''}`}
+              className={`shrink-0 rounded-sm border px-3 py-[6px] text-[13px] font-medium no-underline transition-colors duration-150 ${
+                isActive
+                  ? 'is-active border-accent bg-transparent text-accent'
+                  : 'border-transparent bg-transparent text-muted hover:bg-bg-warm hover:text-ink'
+              }`}
               aria-current={isActive ? 'true' : undefined}
               onClick={() => handleClick(id)}
             >

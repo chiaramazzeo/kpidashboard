@@ -1,6 +1,6 @@
+/** REVIEW: barre blu (#80a7ff) + verdi; nessun bordo destro sul fill */
 import { useInView } from '../../hooks/useCountUp'
 import { deltaLabel, formatScore } from '../../utils/format'
-import './charts.css'
 
 type Item = {
   label: string
@@ -19,59 +19,53 @@ export function YoYBars({ items, currentLabel, previousLabel }: Props) {
 
   return (
     <div ref={ref}>
-      <ul className="chart-legend">
+      <ul className="mb-4 flex list-none flex-wrap gap-x-5 gap-y-3 p-0 font-mono text-xs text-ink-soft">
         <li>
-          <span className="chart-legend__swatch" style={{ background: 'var(--series-a)' }} />
+          <span className="mr-[6px] inline-block h-3 w-3 border border-series-stroke bg-series-a align-[-1px]" />
           {currentLabel}
         </li>
         <li>
-          <span className="chart-legend__swatch" style={{ background: 'var(--series-c)' }} />
+          <span className="mr-[6px] inline-block h-3 w-3 border border-series-stroke bg-series-c align-[-1px]" />
           {previousLabel}
         </li>
       </ul>
-      <div className="hbar">
-        {items.map((item) => (
-          <div key={item.label} style={{ display: 'grid', gap: '0.35rem' }}>
-            <div className="hbar__row">
-              <span className="hbar__label">{item.label}</span>
-              <div className="hbar__track" style={{ height: 'auto', padding: '0.2rem', display: 'grid', gap: '0.2rem' }}>
-                <div
-                  className={`hbar__fill${inView ? ' is-visible' : ''}`}
-                  style={{
-                    width: `${item.previous}%`,
-                    height: '0.55rem',
-                    background: 'var(--series-c)',
-                    borderRight: '1px solid var(--series-stroke)',
-                  }}
-                />
-                <div
-                  className={`hbar__fill${inView ? ' is-visible' : ''}`}
-                  style={{
-                    width: `${item.current}%`,
-                    height: '0.55rem',
-                    background: 'var(--series-a)',
-                    borderRight: '1px solid var(--series-stroke)',
-                  }}
-                />
-              </div>
-              <span className="hbar__value">
-                {formatScore(item.current)}
-                <br />
-                <span
-                  className={`delta ${
-                    item.current > item.previous
-                      ? 'delta--up'
-                      : item.current < item.previous
-                        ? 'delta--down'
-                        : 'delta--flat'
-                  }`}
-                >
-                  {deltaLabel(item.current, item.previous)}
+      <div className="grid gap-[14px]">
+        {items.map((item) => {
+          const tone =
+            item.current > item.previous
+              ? 'text-delta-up'
+              : item.current < item.previous
+                ? 'text-negative'
+                : 'text-muted'
+          return (
+            <div key={item.label} className="grid gap-1">
+              <div className="grid grid-cols-[minmax(8rem,11rem)_1fr_auto] items-center gap-3 max-sm:grid-cols-1 max-sm:gap-1">
+                <span className="text-[14.5px] text-ink-soft">{item.label}</span>
+                <div className="relative grid gap-[3px] overflow-hidden border border-series-stroke bg-bg-warm p-[3px]">
+                  <div
+                    className={`hbar-fill h-[9px]${inView ? ' is-visible' : ''}`}
+                    style={{
+                      width: `${item.previous}%`,
+                      background: 'var(--color-series-c)',
+                    }}
+                  />
+                  <div
+                    className={`hbar-fill h-[9px]${inView ? ' is-visible' : ''}`}
+                    style={{
+                      width: `${item.current}%`,
+                      background: 'var(--color-series-a)',
+                    }}
+                  />
+                </div>
+                <span className="min-w-10 text-right font-mono text-[13px]">
+                  {formatScore(item.current)}
+                  <br />
+                  <span className={tone}>{deltaLabel(item.current, item.previous)}</span>
                 </span>
-              </span>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

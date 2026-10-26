@@ -1,5 +1,4 @@
 import { formatScore } from '../../utils/format'
-import './charts.css'
 
 type Item = {
   label: string
@@ -12,31 +11,31 @@ type Props = {
 
 export function ParticipationStack({ items }: Props) {
   return (
-    <div className="part-stack">
-      <ul className="chart-legend">
+    <div className="grid gap-3">
+      <ul className="mb-0 flex list-none flex-wrap gap-x-5 gap-y-3 p-0 font-mono text-xs text-ink-soft">
         <li>
-          <span className="chart-legend__swatch" style={{ background: 'var(--series-a)' }} />
+          <span className="mr-[6px] inline-block h-3 w-3 border border-series-stroke bg-series-a align-[-1px]" />
           Ha risposto
         </li>
         <li>
-          <span className="chart-legend__swatch" style={{ background: 'var(--bg-warm)' }} />
+          <span className="mr-[6px] inline-block h-3 w-3 border border-series-stroke bg-bg-warm align-[-1px]" />
           Non ha risposto
         </li>
       </ul>
       {items.map((item) => (
-        <div className="part-stack__row" key={item.label}>
-          <div className="part-stack__label">
+        <div className="grid gap-1" key={item.label}>
+          <div className="flex justify-between gap-4 text-[13.5px]">
             <span>{item.label}</span>
-            <span className="delta">{formatScore(item.rate)}%</span>
+            <span className="font-mono text-[13px]">{formatScore(item.rate)}%</span>
           </div>
-          <div className="part-stack__bar">
+          <div className="flex h-5 overflow-hidden border border-series-stroke">
             <div
-              className="part-stack__seg"
-              style={{ flexGrow: item.rate, background: 'var(--series-a)' }}
+              className="h-full transition-[flex-grow] duration-700 ease-[var(--ease-out)]"
+              style={{ flexGrow: item.rate, background: 'var(--color-series-a)' }}
             />
             <div
-              className="part-stack__seg"
-              style={{ flexGrow: 100 - item.rate, background: 'var(--bg-warm)' }}
+              className="h-full transition-[flex-grow] duration-700 ease-[var(--ease-out)]"
+              style={{ flexGrow: 100 - item.rate, background: 'var(--color-bg-warm)' }}
             />
           </div>
         </div>
