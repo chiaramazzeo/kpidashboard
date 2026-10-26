@@ -60,7 +60,7 @@ function App() {
               <span>
                 <CountUp value={meta.respondents} /> / <CountUp value={meta.invited} />
               </span>
-              <span>rispondenti · invitati</span>
+              <span>rispondenti</span>
             </p>
           </Reveal>
           <Reveal delay={200} className="hero-chart">
@@ -244,7 +244,6 @@ function App() {
         <span>
           {meta.company} · {meta.title}
         </span>
-        <span>Dati illustrativi</span>
       </footer>
     </div>
   )

@@ -5,14 +5,15 @@
   --ink: #010101;
   --ink-soft: #3d3d3d;
   --muted: #676663;
-  --accent: #ff2a00;
-  --accent-soft: #ffe4dc;
+  --accent: #e10600;
+  --accent-secondary: #f87874;
+  --accent-soft: #ffe0de;
   --series-a: #00e373;
   --series-b: #ff498b;
-  --series-c: #00b5ff;
+  --series-c: #80a7ff;
   --series-stroke: #010101;
   --positive: #00e373;
-  --negative: #ff2a00;
+  --negative: #e10600;
   --highlight: #ffe628;
   --line: rgba(1, 1, 1, 0.12);
   --radius: 4px;
@@ -21,8 +22,8 @@
   --font: 'Outfit', system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --header-h: 56px;
-  --nav-h: 44px;
+  --header-h: 92px;
+  --nav-h: 52px;
 }
 
 *,
