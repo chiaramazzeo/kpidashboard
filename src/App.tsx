@@ -1,3 +1,16 @@
+/**
+ * REVIEW / DESIGN INTENT (Golmar 2026 KPI)
+ * Criteri utente da verificare in revisione completa — vedi anche `.cursor/rules/golmar-kpi-review.mdc`.
+ *
+ * - Tailwind v4, spacing base 4px; niente ritorno a CSS BEM legacy.
+ * - Header: GOALmar + KPI maiuscolo; porta 3D rossa senza box; hero→compact allo scroll;
+ *   fondo opaco; --header-h misurato dal DOM così la nav non viene coperta.
+ * - Nav: chip con stroke rosso se attiva (no fill pieno, no underline); lock al click
+ *   durante smooth scroll; padding verticale simmetrico.
+ * - Colori: accent #e10600, secondary #f87874, series-c #80a7ff; no border-right sulle hbar.
+ * - Export: PDF via print (testo/vettori); HTML con nav ancore cliccabili.
+ * - Copy: solo “rispondenti” in hero; niente “Dati illustrativi” in footer.
+ */
 import { useRef, useState } from 'react'
 import { GroupedBars } from './components/charts/GroupedBars'
 import { HorizontalBars } from './components/charts/HorizontalBars'
@@ -14,15 +27,23 @@ import { SectionNav } from './components/SectionNav'
 import { surveyData } from './data/kpis'
 import { exportDashboardHtml } from './utils/exportHtml'
 import { exportDashboardPdf } from './utils/exportPdf'
-import './App.css'
 
 const data = surveyData
 const { meta, responseRate, indices, splits } = data
 const [engagement, enablement, innovation, trust] = indices
 
+const sectionLabel =
+  'm-0 mb-3 font-mono text-[11.5px] uppercase tracking-[0.08em] text-muted'
+const sectionHead =
+  'mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3'
+const sectionScore =
+  'm-0 flex items-baseline gap-3 font-display text-[clamp(2.5rem,6vw,3.5rem)] font-bold leading-none tracking-[-0.015em]'
+const sectionClass =
+  'section border-b border-line py-[44px] [scroll-margin-top:calc(var(--header-h)+var(--nav-h)+8px)]'
+
 function App() {
   const reportRef = useRef<HTMLElement>(null)
-  const [exporting, setExporting] = useState(false)
+  const [exporting] = useState(false)
 
   const handleExportPdf = () => {
     if (exporting) return
@@ -52,38 +73,40 @@ function App() {
       />
       <SectionNav />
 
-      <main className="report" ref={reportRef}>
-        <section className="section section--hero" id="response">
+      <main className="report mx-auto max-w-report px-5 pb-14" ref={reportRef}>
+        <section className={`${sectionClass} pt-10`} id="response">
           <Reveal delay={0}>
-            <p className="section__label">Response Rate</p>
+            <p className={sectionLabel}>Response Rate</p>
           </Reveal>
-          <Reveal delay={80} className="hero-block">
-            <p className="hero-number">
+          <Reveal delay={80} className="mb-8">
+            <p className="m-0 font-display text-[clamp(5rem,18vw,10rem)] font-extrabold leading-[0.92] tracking-[-0.02em]">
               <CountUp value={responseRate.value} duration={1400} />
-              <span className="hero-number__unit">%</span>
+              <span className="ml-[0.05em] align-super text-[0.35em] font-bold text-muted">
+                %
+              </span>
             </p>
             <DeltaBadge
               current={responseRate.value}
               previous={responseRate.previousValue}
               previousYear={meta.previousYear}
             />
-            <p className="hero-meta">
-              <span>
+            <p className="mt-4 mb-0 flex flex-col gap-[2px] font-mono text-[12.5px] text-muted">
+              <span className="text-base text-ink">
                 <CountUp value={meta.respondents} /> / <CountUp value={meta.invited} />
               </span>
               <span>rispondenti</span>
             </p>
           </Reveal>
-          <Reveal delay={200} className="hero-chart">
+          <Reveal delay={200} className="max-w-[36rem]">
             <ParticipationStack items={responseRate.byArea} />
           </Reveal>
         </section>
 
-        <section className="section" id="overview">
+        <section className={sectionClass} id="overview">
           <Reveal>
-            <p className="section__label">Overview</p>
+            <p className={sectionLabel}>Overview</p>
           </Reveal>
-          <div className="kpi-strip">
+          <div className="my-2 mb-8 grid grid-cols-4 border-y border-ink max-[900px]:grid-cols-2 max-[520px]:grid-cols-1">
             {indices.map((index, i) => (
               <KpiCard
                 key={index.id}
@@ -94,7 +117,7 @@ function App() {
               />
             ))}
           </div>
-          <Reveal delay={280} className="block-chart">
+          <Reveal delay={280} className="max-w-full">
             <YoYBars
               currentLabel={String(meta.year)}
               previousLabel={String(meta.previousYear)}
@@ -107,10 +130,10 @@ function App() {
           </Reveal>
         </section>
 
-        <section className="section" id="engagement">
-          <Reveal className="section__head">
-            <p className="section__label">Engagement</p>
-            <p className="section__score">
+        <section className={sectionClass} id="engagement">
+          <Reveal className={sectionHead}>
+            <p className={`${sectionLabel} mb-0`}>Engagement</p>
+            <p className={sectionScore}>
               <CountUp value={engagement.score} />
               <DeltaBadge
                 current={engagement.score}
@@ -119,9 +142,9 @@ function App() {
               />
             </p>
           </Reveal>
-          <Reveal delay={120} className="block-chart">
+          <Reveal delay={120} className="max-w-full">
             <HorizontalBars
-              color="var(--series-a)"
+              color="var(--color-series-a)"
               items={engagement.drivers.map((d) => ({
                 label: d.label,
                 value: d.score,
@@ -130,10 +153,10 @@ function App() {
           </Reveal>
         </section>
 
-        <section className="section" id="enablement">
-          <Reveal className="section__head">
-            <p className="section__label">Enablement</p>
-            <p className="section__score">
+        <section className={sectionClass} id="enablement">
+          <Reveal className={sectionHead}>
+            <p className={`${sectionLabel} mb-0`}>Enablement</p>
+            <p className={sectionScore}>
               <CountUp value={enablement.score} />
               <DeltaBadge
                 current={enablement.score}
@@ -142,7 +165,7 @@ function App() {
               />
             </p>
           </Reveal>
-          <Reveal delay={120} className="block-chart">
+          <Reveal delay={120} className="max-w-full">
             <GroupedBars
               currentLabel={String(meta.year)}
               previousLabel={String(meta.previousYear)}
@@ -155,10 +178,10 @@ function App() {
           </Reveal>
         </section>
 
-        <section className="section" id="innovation">
-          <Reveal className="section__head">
-            <p className="section__label">Innovation</p>
-            <p className="section__score">
+        <section className={sectionClass} id="innovation">
+          <Reveal className={sectionHead}>
+            <p className={`${sectionLabel} mb-0`}>Innovation</p>
+            <p className={sectionScore}>
               <CountUp value={innovation.score} />
               <DeltaBadge
                 current={innovation.score}
@@ -167,7 +190,7 @@ function App() {
               />
             </p>
           </Reveal>
-          <Reveal delay={120} className="block-chart">
+          <Reveal delay={120} className="max-w-full">
             <SmallMultiples
               year={meta.year}
               previousYear={meta.previousYear}
@@ -176,10 +199,10 @@ function App() {
           </Reveal>
         </section>
 
-        <section className="section" id="trust">
-          <Reveal className="section__head">
-            <p className="section__label">Trust</p>
-            <p className="section__score">
+        <section className={sectionClass} id="trust">
+          <Reveal className={sectionHead}>
+            <p className={`${sectionLabel} mb-0`}>Trust</p>
+            <p className={sectionScore}>
               <CountUp value={trust.score} />
               <DeltaBadge
                 current={trust.score}
@@ -188,8 +211,8 @@ function App() {
               />
             </p>
           </Reveal>
-          <div className="trust-grid">
-            <Reveal delay={100} className="block-chart">
+          <div className="grid grid-cols-[minmax(12rem,16rem)_1fr] items-center gap-8 max-[900px]:grid-cols-1">
+            <Reveal delay={100} className="max-w-full">
               <SlopeChart
                 previousLabel={String(meta.previousYear)}
                 currentLabel={String(meta.year)}
@@ -197,9 +220,9 @@ function App() {
                 current={trust.score}
               />
             </Reveal>
-            <Reveal delay={180} className="block-chart">
+            <Reveal delay={180} className="max-w-full">
               <HorizontalBars
-                color="var(--series-b)"
+                color="var(--color-series-b)"
                 items={[...trust.drivers]
                   .sort((a, b) => b.score - a.score)
                   .map((d) => ({ label: d.label, value: d.score }))}
@@ -208,13 +231,15 @@ function App() {
           </div>
         </section>
 
-        <section className="section" id="splits">
+        <section className={sectionClass} id="splits">
           <Reveal>
-            <p className="section__label">Segmenti</p>
+            <p className={sectionLabel}>Segmenti</p>
           </Reveal>
-          <div className="splits-grid">
-            <Reveal delay={80} className="block-chart">
-              <p className="block-chart__title">Area</p>
+          <div className="mt-2 grid grid-cols-3 gap-x-6 gap-y-8 max-[900px]:grid-cols-1">
+            <Reveal delay={80} className="max-w-full">
+              <p className="mb-[14px] mt-0 font-mono text-[11.5px] uppercase tracking-[0.06em] text-muted">
+                Area
+              </p>
               <YoYBars
                 currentLabel={String(meta.year)}
                 previousLabel={String(meta.previousYear)}
@@ -225,18 +250,22 @@ function App() {
                 }))}
               />
             </Reveal>
-            <Reveal delay={140} className="block-chart">
-              <p className="block-chart__title">Seniority</p>
+            <Reveal delay={140} className="max-w-full">
+              <p className="mb-[14px] mt-0 font-mono text-[11.5px] uppercase tracking-[0.06em] text-muted">
+                Seniority
+              </p>
               <HorizontalBars
-                color="var(--series-b)"
+                color="var(--color-series-b)"
                 items={splits.trustBySeniority.map((s) => ({
                   label: s.label,
                   value: s.score,
                 }))}
               />
             </Reveal>
-            <Reveal delay={200} className="block-chart">
-              <p className="block-chart__title">Funzione</p>
+            <Reveal delay={200} className="max-w-full">
+              <p className="mb-[14px] mt-0 font-mono text-[11.5px] uppercase tracking-[0.06em] text-muted">
+                Funzione
+              </p>
               <GroupedBars
                 currentLabel={String(meta.year)}
                 previousLabel={String(meta.previousYear)}
@@ -251,7 +280,7 @@ function App() {
         </section>
       </main>
 
-      <footer className="footer">
+      <footer className="mx-auto flex max-w-report flex-wrap justify-between gap-3 px-5 pb-10 pt-6 font-mono text-[11.5px] text-muted">
         <span>
           {meta.company} · {meta.title}
         </span>

@@ -1,0 +1,46 @@
+---
+description: Criteri di revisione e design intent del KPI dashboard Golmar (indicazioni prodotto)
+alwaysApply: true
+---
+
+# Golmar KPI dashboard — criteri di revisione
+
+Quando rivedi o modifichi questo progetto, verifica **tutti** i punti seguenti (indicazioni utente).
+
+## Stack e layout
+- Styling con **Tailwind CSS v4**; unità di spacing base **4px** (`@theme { --spacing: 4px }`).
+- CSS custom solo per: reveal, animazioni barre (scaleX/Y), header compact, print.
+- Non reintrodurre fogli BEM tipo `App.css` / `charts.css` / `tokens.css`.
+
+## Branding header
+- Titolo: **`GOALmar: {title}`** con KPI in **maiuscolo** nei dati (`Golmar 2026 KPI`).
+- **Niente corsivo** su GOAL.
+- Mark = **porta da calcio 3D rossa** (pali/traversa con spessore), **senza** quadrato/badge rosso dietro.
+- Titolo **hero** in cima; allo scroll diventa **compatto** (transizione).
+- Tracking titolo più stretto (`letter-spacing` negativo, circa `-0.03em`).
+- Header **opaco** (`bg-bg`), **non** trasparente / no backdrop-blur.
+- `--header-h` deve seguire l’**altezza reale** dell’header (misura DOM), così la nav non resta coperta.
+
+## Navigazione sezioni (chip)
+- Link come **chip** (bordo `rounded-sm`), **niente** underline / riga sotto.
+- Attiva: solo **stroke + testo rosso accent**, non riempimento pieno (troppo “acceso”).
+- Al click la chip deve **restare evidenziata** durante lo scroll smooth (lock sync; non farsi sovrascrivere subito dallo scroll spy).
+- Padding **uguale** sopra/sotto nella barra; chip non tagliate / non coperte da header o bordo.
+
+## Colori
+- Accent / rosso: `#e10600` (non arancione `#ff2a00`).
+- Pulsante secondario (PDF): rosso più chiaro `#f87874`.
+- Serie blu: `#80a7ff` (non azzurro acceso `#00b5ff`).
+- Barrette hbar: **niente** `border-right` sul fill.
+
+## Copy / UI
+- Footer: **niente** “Dati illustrativi”.
+- Hero meta label: solo **“rispondenti”** (non “rispondenti · invitati”).
+- Azioni header: **Scarica HTML** + **Scarica PDF**.
+
+## Export
+- **PDF**: testo e vettori (print browser), **non** raster html2canvas/immagine.
+- **HTML**: snapshot con **nav sezioni cliccabili** e scroll alle ancore; reveal forzati visibili.
+
+## Contenuto
+- Non inventare KPI: i dati vivono in `src/data/kpis.ts`.

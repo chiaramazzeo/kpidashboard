@@ -1,6 +1,9 @@
 import type { SurveyData } from './types'
 
-/** Dati illustrativi — sostituire con i valori reali della survey. */
+/**
+ * REVIEW: fonte unica dei KPI. title con "KPI" maiuscolo (header: GOALmar: {title}).
+ * Sostituire i valori illustrativi con i risultati reali della survey.
+ */
 export const surveyData: SurveyData = {
   meta: {
     title: 'Golmar 2026 KPI',

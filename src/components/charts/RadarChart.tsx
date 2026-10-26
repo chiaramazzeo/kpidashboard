@@ -1,5 +1,4 @@
 import { useInView } from '../../hooks/useCountUp'
-import './charts.css'
 
 type Series = {
   label: string
@@ -39,22 +38,25 @@ export function RadarChart({ axes, series, max = 100 }: Props) {
       .join(' ')
 
   return (
-    <div className="radar" ref={ref}>
-      <ul className="chart-legend">
+    <div className="mx-auto aspect-square w-full max-w-[360px]" ref={ref}>
+      <ul className="mb-4 flex list-none flex-wrap gap-x-5 gap-y-3 p-0 font-mono text-xs text-ink-soft">
         {series.map((s) => (
           <li key={s.label}>
-            <span className="chart-legend__swatch" style={{ background: s.color }} />
+            <span
+              className="mr-[6px] inline-block h-3 w-3 border border-series-stroke align-[-1px]"
+              style={{ background: s.color }}
+            />
             {s.label}
           </li>
         ))}
       </ul>
-      <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Confronto indici radar">
+      <svg className="h-full w-full" viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Confronto indici radar">
         {levels.map((level) => (
           <polygon
             key={level}
             points={polygon(axes.map(() => max * level))}
             fill="none"
-            stroke="var(--line)"
+            stroke="var(--color-line)"
             strokeWidth="1"
           />
         ))}
@@ -71,7 +73,7 @@ export function RadarChart({ axes, series, max = 100 }: Props) {
                 y1={cy}
                 x2={tip.x}
                 y2={tip.y}
-                stroke="var(--line)"
+                stroke="var(--color-line)"
                 strokeWidth="1"
               />
               <text
@@ -80,8 +82,8 @@ export function RadarChart({ axes, series, max = 100 }: Props) {
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="11"
-                fontFamily="var(--mono)"
-                fill="var(--ink-soft)"
+                fontFamily="var(--font-mono)"
+                fill="var(--color-ink-soft)"
               >
                 {axis}
               </text>
@@ -111,7 +113,7 @@ export function RadarChart({ axes, series, max = 100 }: Props) {
                 cy={p.y}
                 r="3.5"
                 fill={s.color}
-                stroke="var(--series-stroke)"
+                stroke="var(--color-series-stroke)"
                 strokeWidth="1"
               />
             )

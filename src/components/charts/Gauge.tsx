@@ -1,7 +1,6 @@
 import type { Ref } from 'react'
 import { useCountUp } from '../../hooks/useCountUp'
 import { formatScore } from '../../utils/format'
-import './charts.css'
 
 type Props = {
   value: number
@@ -27,34 +26,33 @@ export function Gauge({ value, max = 100 }: Props) {
   }
 
   return (
-    <div className="gauge" ref={ref as Ref<HTMLDivElement>}>
-      <svg viewBox="0 0 200 110" aria-hidden>
+    <div className="relative mx-auto aspect-[2/1] w-min min-w-0 max-w-full" style={{ width: 'min(220px, 100%)' }} ref={ref as Ref<HTMLDivElement>}>
+      <svg className="h-full w-full overflow-visible" viewBox="0 0 200 110" aria-hidden>
         <path
           d={arc(Math.PI, 2 * Math.PI)}
           fill="none"
-          stroke="var(--bg-warm)"
+          stroke="var(--color-bg-warm)"
           strokeWidth="18"
           strokeLinecap="butt"
         />
         <path
           d={arc(start, end)}
           fill="none"
-          stroke="var(--series-a)"
+          stroke="var(--color-series-a)"
           strokeWidth="18"
           strokeLinecap="butt"
         />
         <path
           d={arc(Math.PI, 2 * Math.PI)}
           fill="none"
-          stroke="var(--series-stroke)"
+          stroke="var(--color-series-stroke)"
           strokeWidth="1"
-          transform="translate(0 0)"
           style={{ opacity: 0.35 }}
         />
       </svg>
-      <div className="gauge__value">
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[clamp(2rem,5vw,2.75rem)] font-semibold leading-none tracking-[-0.03em]">
         {formatScore(animated)}
-        <span className="gauge__unit">%</span>
+        <span className="text-[0.55em] font-medium text-muted">%</span>
       </div>
     </div>
   )

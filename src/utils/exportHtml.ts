@@ -1,3 +1,8 @@
+/**
+ * REVIEW — Export HTML
+ * Snapshot del report + nav sezioni cliccabili (#ancore) con scroll smooth
+ * e chip attiva. Reveal forzati visibili. Stili Tailwind raccolti dai CSS del documento.
+ */
 const SECTION_LINKS = [
   { href: '#response', label: 'Response' },
   { href: '#overview', label: 'Overview' },
@@ -34,14 +39,19 @@ function prepareClone(element: HTMLElement): string {
   return clone.outerHTML
 }
 
+const linkBase =
+  'shrink-0 rounded-sm border px-3 py-[6px] text-[13px] font-medium no-underline transition-colors duration-150'
+const linkIdle = 'border-transparent bg-transparent text-muted hover:bg-bg-warm hover:text-ink'
+const linkActive = 'is-active border-accent bg-transparent text-accent'
+
 function buildSectionNavHtml(): string {
   const links = SECTION_LINKS.map(
     (link, index) =>
-      `<a href="${link.href}" class="section-nav__link${index === 0 ? ' is-active' : ''}"${index === 0 ? ' aria-current="true"' : ''}>${link.label}</a>`,
+      `<a href="${link.href}" class="${linkBase} ${index === 0 ? linkActive : linkIdle}"${index === 0 ? ' aria-current="true"' : ''}>${link.label}</a>`,
   ).join('\n          ')
 
-  return `<nav class="section-nav" aria-label="Sezioni">
-      <div class="section-nav__inner">
+  return `<nav class="section-nav sticky top-0 z-30 border-b border-line bg-bg" aria-label="Sezioni">
+      <div class="mx-auto box-border flex max-w-report items-center gap-1 overflow-x-auto px-5 py-3 [scrollbar-width:thin]">
           ${links}
       </div>
     </nav>`
@@ -50,9 +60,12 @@ function buildSectionNavHtml(): string {
 const NAV_SCRIPT = `
 (function () {
   var ids = [${SECTION_LINKS.map((l) => JSON.stringify(l.href.slice(1))).join(', ')}];
-  var links = Array.prototype.slice.call(document.querySelectorAll('.section-nav__link'));
+  var links = Array.prototype.slice.call(document.querySelectorAll('.section-nav a'));
   var locked = null;
   var unlockTimer = null;
+  var linkBase = ${JSON.stringify(linkBase)};
+  var linkIdle = ${JSON.stringify(linkIdle)};
+  var linkActive = ${JSON.stringify(linkActive)};
 
   function offset() {
     var nav = document.querySelector('.section-nav');
@@ -72,7 +85,7 @@ const NAV_SCRIPT = `
   function setActive(id) {
     links.forEach(function (link) {
       var match = link.getAttribute('href') === '#' + id;
-      link.classList.toggle('is-active', match);
+      link.className = linkBase + ' ' + (match ? linkActive : linkIdle);
       if (match) link.setAttribute('aria-current', 'true');
       else link.removeAttribute('aria-current');
     });
@@ -159,7 +172,7 @@ body {
   top: 0 !important;
 }
 .section {
-  scroll-margin-top: calc(var(--nav-h) + 0.5rem) !important;
+  scroll-margin-top: calc(var(--nav-h) + 8px) !important;
 }
   </style>
 </head>
