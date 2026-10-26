@@ -12,6 +12,8 @@ import { KpiCard } from './components/KpiCard'
 import { Reveal } from './components/Reveal'
 import { SectionNav } from './components/SectionNav'
 import { surveyData } from './data/kpis'
+import { exportDashboardHtml } from './utils/exportHtml'
+import { exportDashboardPdf } from './utils/exportPdf'
 import './App.css'
 
 const data = surveyData
@@ -22,23 +24,32 @@ function App() {
   const reportRef = useRef<HTMLElement>(null)
   const [exporting, setExporting] = useState(false)
 
-  const handleExport = async () => {
+  const handleExportPdf = () => {
+    if (exporting) return
+    exportDashboardPdf()
+  }
+
+  const handleExportHtml = () => {
     if (!reportRef.current || exporting) return
-    setExporting(true)
     try {
-      const { exportDashboardPdf } = await import('./utils/exportPdf')
-      await exportDashboardPdf(reportRef.current, 'Golmar-2026-KPI.pdf')
+      exportDashboardHtml(
+        reportRef.current,
+        'Golmar-2026-KPI.html',
+        meta.title,
+      )
     } catch (err) {
       console.error(err)
-      window.print()
-    } finally {
-      setExporting(false)
     }
   }
 
   return (
     <div className={exporting ? 'exporting' : undefined}>
-      <Header title={meta.title} onExport={handleExport} exporting={exporting} />
+      <Header
+        title={meta.title}
+        onExportPdf={handleExportPdf}
+        onExportHtml={handleExportHtml}
+        exporting={exporting}
+      />
       <SectionNav />
 
       <main className="report" ref={reportRef}>

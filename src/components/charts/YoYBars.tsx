@@ -41,7 +41,6 @@ export function YoYBars({ items, currentLabel, previousLabel }: Props) {
                     width: `${item.previous}%`,
                     height: '0.55rem',
                     background: 'var(--series-c)',
-                    borderRight: '1px solid var(--series-stroke)',
                   }}
                 />
                 <div
@@ -50,7 +49,6 @@ export function YoYBars({ items, currentLabel, previousLabel }: Props) {
                     width: `${item.current}%`,
                     height: '0.55rem',
                     background: 'var(--series-a)',
-                    borderRight: '1px solid var(--series-stroke)',
                   }}
                 />
               </div>

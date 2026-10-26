@@ -53,7 +53,6 @@
 
 .hbar__fill {
   height: 100%;
-  border-right: 1px solid var(--series-stroke);
   transform-origin: left center;
   transform: scaleX(0);
   transition: transform 0.85s var(--ease-out);
