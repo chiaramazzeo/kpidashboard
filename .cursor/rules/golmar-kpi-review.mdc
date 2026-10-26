@@ -13,7 +13,7 @@ Quando rivedi o modifichi questo progetto, verifica **tutti** i punti seguenti (
 - Non reintrodurre fogli BEM tipo `App.css` / `charts.css` / `tokens.css`.
 
 ## Branding header
-- Titolo: **`GOALmar: {title}`** con KPI in **maiuscolo** nei dati (`Golmar 2026 KPI`).
+- Titolo: **`GOALmar: {title}`** con KPI in **maiuscolo** nei dati (`Golmar 2028 KPI`).
 - **Niente corsivo** su GOAL.
 - Mark = **porta da calcio 3D rossa** (pali/traversa con spessore), **senza** quadrato/badge rosso dietro.
 - Titolo **hero** in cima; allo scroll diventa **compatto** (transizione).

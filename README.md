@@ -1,4 +1,4 @@
-# Golmar 2026 KPI
+# Golmar 2028 KPI
 
 Dashboard editoriale per i KPI della survey engagement Golmar (management interno).
 

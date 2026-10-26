@@ -1,74 +1,95 @@
 import { formatScore } from '../../utils/format'
+import { yearCssVar } from '../../utils/yearColors'
 
 type Props = {
   previousLabel: string
   currentLabel: string
   previous: number
   current: number
+  previousYear: number
+  year: number
   max?: number
 }
 
+/**
+ * Testo in HTML (text-xs / text-sm) — non scala con la larghezza.
+ * Solo la linea riempie lo spazio; altezza fissa così non diventa un “cartellone”.
+ */
 export function SlopeChart({
   previousLabel,
   currentLabel,
   previous,
   current,
+  previousYear,
+  year,
   max = 100,
 }: Props) {
-  const h = 160
-  const w = 260
-  const pad = 28
-  const x1 = 70
-  const x2 = w - 40
-  const y = (v: number) => pad + (1 - v / max) * (h - pad * 2)
+  const yPct = (v: number) =>
+    `${Math.min(100, Math.max(0, (1 - v / max) * 100))}%`
   const up = current >= previous
+  const prevColor = yearCssVar(previousYear)
+  const curColor = yearCssVar(year)
+  const lineStroke = up ? curColor : 'var(--color-accent)'
+  const tip = `${previousLabel}: ${formatScore(previous)} → ${currentLabel}: ${formatScore(current)}`
 
   return (
-    <div className="w-full max-w-[280px]">
-      <svg className="h-auto w-full" viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Trend annuale">
-        <text x={x1} y={14} textAnchor="middle" fontSize="11" fontFamily="var(--font-mono)" fill="var(--color-muted)">
-          {previousLabel}
-        </text>
-        <text x={x2} y={14} textAnchor="middle" fontSize="11" fontFamily="var(--font-mono)" fill="var(--color-muted)">
-          {currentLabel}
-        </text>
-        <line
-          x1={x1}
-          y1={y(previous)}
-          x2={x2}
-          y2={y(current)}
-          stroke={up ? 'var(--color-series-a)' : 'var(--color-accent)'}
-          strokeWidth="2.5"
-        />
-        <circle cx={x1} cy={y(previous)} r="5" fill="var(--color-series-c)" stroke="var(--color-series-stroke)" />
-        <circle
-          cx={x2}
-          cy={y(current)}
-          r="5"
-          fill={up ? 'var(--color-series-a)' : 'var(--color-accent)'}
-          stroke="var(--color-series-stroke)"
-        />
-        <text
-          x={x1 - 12}
-          y={y(previous) + 4}
-          textAnchor="end"
-          fontSize="12"
-          fontFamily="var(--font-mono)"
-          fill="var(--color-ink)"
-        >
-          {formatScore(previous)}
-        </text>
-        <text
-          x={x2 + 12}
-          y={y(current) + 4}
-          textAnchor="start"
-          fontSize="12"
-          fontFamily="var(--font-mono)"
-          fill="var(--color-ink)"
-        >
-          {formatScore(current)}
-        </text>
-      </svg>
+    <div className="w-full" role="img" aria-label={`Trend annuale. ${tip}`}>
+      <div className="mb-2 flex justify-between gap-4 font-mono text-xs text-muted">
+        <span>{previousLabel}</span>
+        <span>{currentLabel}</span>
+      </div>
+
+      <div className="grid grid-cols-[auto_1fr_auto] items-stretch gap-2">
+        <div className="relative min-w-8">
+          <span
+            className="absolute right-0 -translate-y-1/2 font-mono text-sm tabular-nums text-ink"
+            style={{ top: yPct(previous) }}
+          >
+            {formatScore(previous)}
+          </span>
+        </div>
+
+        <div className="relative min-h-32 w-full">
+          <svg
+            className="absolute inset-0 h-full w-full overflow-visible"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <line
+              x1="0"
+              y1={(1 - previous / max) * 100}
+              x2="100"
+              y2={(1 - current / max) * 100}
+              stroke={lineStroke}
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <span
+            className="absolute left-0 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-ink"
+            style={{ top: yPct(previous), background: prevColor }}
+            aria-hidden
+          />
+          <span
+            className="absolute right-0 z-10 size-2.5 translate-x-1/2 -translate-y-1/2 rounded-full border border-ink"
+            style={{
+              top: yPct(current),
+              background: up ? curColor : 'var(--color-accent)',
+            }}
+            aria-hidden
+          />
+        </div>
+
+        <div className="relative min-w-8">
+          <span
+            className="absolute left-0 -translate-y-1/2 font-mono text-sm tabular-nums text-ink"
+            style={{ top: yPct(current) }}
+          >
+            {formatScore(current)}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
