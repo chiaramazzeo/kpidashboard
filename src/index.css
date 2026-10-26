@@ -18,10 +18,16 @@
   --color-accent: #e10600;
   --color-accent-secondary: #f87874;
   --color-accent-soft: #ffe0de;
+  /* Serie allineate agli anni: a=2028 verde, c=2027 blu */
   --color-series-a: #00e373;
   --color-series-b: #ff498b;
   --color-series-c: #80a7ff;
   --color-series-stroke: #010101;
+  --color-year-2026: #e8a838;
+  --color-year-2027: #80a7ff;
+  --color-year-2028: #00e373;
+  --color-year-current: var(--color-year-2028);
+  --color-year-previous: var(--color-year-2027);
   --color-positive: #00e373;
   --color-negative: #e10600;
   --color-highlight: #ffe628;
@@ -34,12 +40,18 @@
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --max-width-report: 1120px;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --text-label: 0.75rem;
+  --text-chip: 0.8125rem;
+  --spacing-sticky-gap: 8px;
 }
 
 :root {
-  --header-h: 92px;
+  --chrome-h: 148px;
+  --header-h: 148px;
   --header-h-compact: 56px;
   --nav-h: 52px;
+  --sticky-gap: 8px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --reveal-delay: 0ms;
 }
@@ -101,39 +113,110 @@
     transform: translateY(0);
   }
 
+  .site-chrome {
+    background: var(--color-bg);
+  }
+
+  /* Hero più grande; compact resta moderato (non crolla troppo). */
+  .site-header {
+    --header-title-size: clamp(2.25rem, 5.5vw, 3.1rem);
+    --header-pad-y: calc(var(--header-title-size) * 0.48);
+    --header-mark-scale: 1.35;
+    background: var(--color-bg);
+  }
+
+  .section-nav {
+    background: var(--color-bg);
+  }
+
+  .site-header--compact {
+    --header-title-size: clamp(1.55rem, 3.4vw, 1.95rem);
+    --header-pad-y: calc(var(--header-title-size) * 0.42);
+    --header-mark-scale: 1.12;
+  }
+
   .site-header__inner {
-    transition: padding 0.25s var(--ease-out);
+    padding-block: var(--header-pad-y);
+    transition: padding-block 0.25s var(--ease-out);
   }
 
   .site-header__mark svg {
     display: block;
-    transform: scale(1.35);
+    transform: scale(var(--header-mark-scale));
     transform-origin: center;
     transition: transform 0.25s var(--ease-out);
   }
 
-  .site-header--compact .site-header__mark svg {
-    transform: scale(1);
-  }
-
   .site-header__title {
-    font-size: clamp(2.1rem, 5.5vw, 3.1rem);
+    font-size: var(--header-title-size);
+    white-space: nowrap;
+    line-height: 1.15;
     transition: font-size 0.25s var(--ease-out);
   }
 
-  .site-header--compact .site-header__title {
-    font-size: clamp(1.05rem, 2.4vw, 1.35rem);
-    line-height: 1.25;
+  .site-header__title-brand {
+    display: inline;
   }
 
-  .site-header--compact .site-header__inner {
-    padding-block: 14px;
+  .site-header__menu-btn {
+    width: calc(var(--header-title-size) * 1.15);
+    height: calc(var(--header-title-size) * 1.15);
+    min-width: 2rem;
+    min-height: 2rem;
+    max-width: 2.5rem;
+    max-height: 2.5rem;
+    transition:
+      width 0.25s var(--ease-out),
+      height 0.25s var(--ease-out);
+  }
+
+  @media (max-width: 639px) {
+    .site-header {
+      --header-title-size: clamp(1.55rem, 6.5vw, 1.95rem);
+      --header-mark-scale: 1.2;
+    }
+
+    .site-header--compact {
+      --header-title-size: clamp(1.25rem, 4.5vw, 1.45rem);
+      --header-mark-scale: 1.08;
+    }
+
+    .site-header__title {
+      white-space: normal;
+      line-height: 1.12;
+    }
+
+    .site-header__title-brand {
+      display: block;
+    }
+
+    .site-header--compact .site-header__inner {
+      align-items: center;
+    }
+
+    .site-header--compact .site-header__brand {
+      align-items: center;
+    }
+
+    .site-header--compact .site-header__mark {
+      margin-top: 0;
+    }
+
+    .site-header--compact .site-header__title {
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .site-header--compact .site-header__title-brand {
+      display: inline;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .site-header__inner,
     .site-header__mark svg,
-    .site-header__title {
+    .site-header__title,
+    .site-header__menu-btn {
       transition: none;
     }
   }
@@ -167,6 +250,87 @@
   .bullet-fill.is-visible {
     transform: scaleX(1);
   }
+
+  .section-nav__scroller {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .section-nav__scroller::-webkit-scrollbar {
+    display: none;
+  }
+
+  .section-nav__fade {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2.5rem;
+    opacity: 0;
+    transition: opacity 0.2s var(--ease-out);
+    z-index: 1;
+  }
+
+  .section-nav__fade.is-visible {
+    opacity: 1;
+  }
+
+  .section-nav__fade--left {
+    left: 0;
+    background: linear-gradient(to right, var(--color-bg), transparent);
+  }
+
+  .section-nav__fade--right {
+    right: 0;
+    background: linear-gradient(to left, var(--color-bg), transparent);
+  }
+
+  .section-nav__arrow {
+    appearance: none;
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-ink);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-elevated);
+    color: var(--color-ink);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: opacity 0.2s var(--ease-out);
+  }
+
+  .section-nav__arrow.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .section-nav__arrow:disabled {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .section-nav__arrow--left {
+    left: 0.35rem;
+  }
+
+  .section-nav__arrow--right {
+    right: 0.35rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .section-nav__fade,
+    .section-nav__arrow {
+      transition: none;
+    }
+  }
 }
 
 @media print {
@@ -181,6 +345,7 @@
     color: var(--color-ink);
   }
 
+  .site-chrome,
   .site-header,
   .section-nav,
   .site-header__actions,
@@ -190,6 +355,13 @@
 
   .reveal {
     opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .hbar-fill,
+  .gbar-bar,
+  .bullet-fill {
     transform: none !important;
     transition: none !important;
   }

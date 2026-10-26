@@ -1,17 +1,9 @@
 /**
  * REVIEW — Export HTML
  * Snapshot del report + nav sezioni cliccabili (#ancore) con scroll smooth
- * e chip attiva. Reveal forzati visibili. Stili Tailwind raccolti dai CSS del documento.
+ * e chip attiva. Reveal e barre forzati visibili. Stili Tailwind dai CSS del documento.
  */
-const SECTION_LINKS = [
-  { href: '#response', label: 'Response' },
-  { href: '#overview', label: 'Overview' },
-  { href: '#engagement', label: 'Engagement' },
-  { href: '#enablement', label: 'Enablement' },
-  { href: '#innovation', label: 'Innovation' },
-  { href: '#trust', label: 'Trust' },
-  { href: '#splits', label: 'Segmenti' },
-] as const
+import { SECTION_LINKS } from '../data/nav'
 
 function collectDocumentCss(): string {
   const parts: string[] = []
@@ -33,14 +25,16 @@ function collectDocumentCss(): string {
 
 function prepareClone(element: HTMLElement): string {
   const clone = element.cloneNode(true) as HTMLElement
-  clone.querySelectorAll('.reveal').forEach((node) => {
-    node.classList.add('is-visible')
-  })
+  clone
+    .querySelectorAll('.reveal, .hbar-fill, .gbar-bar, .bullet-fill')
+    .forEach((node) => {
+      node.classList.add('is-visible')
+    })
   return clone.outerHTML
 }
 
 const linkBase =
-  'shrink-0 rounded-sm border px-3 py-[6px] text-[13px] font-medium no-underline transition-colors duration-150'
+  'shrink-0 rounded-sm border px-3 py-2 text-chip font-medium no-underline transition-colors duration-150'
 const linkIdle = 'border-transparent bg-transparent text-muted hover:bg-bg-warm hover:text-ink'
 const linkActive = 'is-active border-accent bg-transparent text-accent'
 
@@ -51,8 +45,18 @@ function buildSectionNavHtml(): string {
   ).join('\n          ')
 
   return `<nav class="section-nav sticky top-0 z-30 border-b border-line bg-bg" aria-label="Sezioni">
-      <div class="mx-auto box-border flex max-w-report items-center gap-1 overflow-x-auto px-5 py-3 [scrollbar-width:thin]">
+      <div class="section-nav__shell relative mx-auto max-w-report">
+        <div class="section-nav__scroller box-border flex items-center gap-1 overflow-x-auto px-5 py-3">
           ${links}
+        </div>
+        <div class="section-nav__fade section-nav__fade--left" aria-hidden="true"></div>
+        <div class="section-nav__fade section-nav__fade--right" aria-hidden="true"></div>
+        <button type="button" class="section-nav__arrow section-nav__arrow--left" aria-label="Sezioni precedenti" tabindex="-1" disabled>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2 L4 7 L9 12" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+        </button>
+        <button type="button" class="section-nav__arrow section-nav__arrow--right" aria-label="Sezioni successive" tabindex="-1" disabled>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2 L10 7 L5 12" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+        </button>
       </div>
     </nav>`
 }
@@ -60,16 +64,23 @@ function buildSectionNavHtml(): string {
 const NAV_SCRIPT = `
 (function () {
   var ids = [${SECTION_LINKS.map((l) => JSON.stringify(l.href.slice(1))).join(', ')}];
-  var links = Array.prototype.slice.call(document.querySelectorAll('.section-nav a'));
+  var links = Array.prototype.slice.call(document.querySelectorAll('.section-nav__scroller a'));
+  var scroller = document.querySelector('.section-nav__scroller');
+  var fadeL = document.querySelector('.section-nav__fade--left');
+  var fadeR = document.querySelector('.section-nav__fade--right');
+  var arrowL = document.querySelector('.section-nav__arrow--left');
+  var arrowR = document.querySelector('.section-nav__arrow--right');
   var locked = null;
   var unlockTimer = null;
   var linkBase = ${JSON.stringify(linkBase)};
   var linkIdle = ${JSON.stringify(linkIdle)};
   var linkActive = ${JSON.stringify(linkActive)};
+  var step = 180;
 
   function offset() {
     var nav = document.querySelector('.section-nav');
-    return (nav ? nav.getBoundingClientRect().height : 44) + 4;
+    var gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sticky-gap')) || 8;
+    return (nav ? nav.getBoundingClientRect().height : 44) + gap;
   }
 
   function resolveActive() {
@@ -82,13 +93,48 @@ const NAV_SCRIPT = `
     return current;
   }
 
+  function syncOverflow() {
+    if (!scroller) return;
+    var left = scroller.scrollLeft > 2;
+    var right = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 2;
+    if (fadeL) fadeL.classList.toggle('is-visible', left);
+    if (fadeR) fadeR.classList.toggle('is-visible', right);
+    if (arrowL) {
+      arrowL.classList.toggle('is-visible', left);
+      arrowL.disabled = !left;
+      arrowL.tabIndex = left ? 0 : -1;
+    }
+    if (arrowR) {
+      arrowR.classList.toggle('is-visible', right);
+      arrowR.disabled = !right;
+      arrowR.tabIndex = right ? 0 : -1;
+    }
+  }
+
   function setActive(id) {
+    var activeLink = null;
     links.forEach(function (link) {
       var match = link.getAttribute('href') === '#' + id;
       link.className = linkBase + ' ' + (match ? linkActive : linkIdle);
-      if (match) link.setAttribute('aria-current', 'true');
-      else link.removeAttribute('aria-current');
+      if (match) {
+        link.setAttribute('aria-current', 'true');
+        activeLink = link;
+      } else link.removeAttribute('aria-current');
     });
+    if (scroller && activeLink) {
+      var target =
+        activeLink.offsetLeft - scroller.clientWidth * 0.25 + activeLink.offsetWidth / 2;
+      var maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      var nextLeft = Math.max(0, Math.min(target, maxScroll));
+      scroller.scrollTo({
+        left: nextLeft,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+      });
+      setTimeout(syncOverflow, 350);
+    }
+    syncOverflow();
   }
 
   function unlock() {
@@ -124,18 +170,46 @@ const NAV_SCRIPT = `
     });
   });
 
+  if (scroller) {
+    scroller.addEventListener('scroll', syncOverflow, { passive: true });
+    window.addEventListener('resize', syncOverflow);
+  }
+  if (arrowL) {
+    arrowL.addEventListener('click', function () {
+      if (!scroller) return;
+      scroller.scrollBy({
+        left: -step,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+      });
+    });
+  }
+  if (arrowR) {
+    arrowR.addEventListener('click', function () {
+      if (!scroller) return;
+      scroller.scrollBy({
+        left: step,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+      });
+    });
+  }
+
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('scrollend', function () {
     if (locked) unlock();
   });
   setActive(resolveActive());
+  syncOverflow();
 })();
 `
 
 export function exportDashboardHtml(
   element: HTMLElement,
-  filename = 'Golmar-2026-KPI.html',
-  pageTitle = 'Golmar 2026 KPI',
+  filename = 'Golmar-2028-KPI.html',
+  pageTitle = 'Golmar 2028 KPI',
 ) {
   const css = collectDocumentCss()
   const bodyHtml = prepareClone(element)
@@ -156,9 +230,14 @@ export function exportDashboardHtml(
   <style>
 ${css}
 
-/* Snapshot: force revealed content visible */
+/* Snapshot: force revealed content + bar fills visible */
 .reveal {
   opacity: 1 !important;
+  transform: none !important;
+}
+.hbar-fill,
+.gbar-bar,
+.bullet-fill {
   transform: none !important;
 }
 html {
@@ -172,7 +251,7 @@ body {
   top: 0 !important;
 }
 .section {
-  scroll-margin-top: calc(var(--nav-h) + 8px) !important;
+  scroll-margin-top: calc(var(--nav-h) + var(--sticky-gap, 8px)) !important;
 }
   </style>
 </head>

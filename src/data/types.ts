@@ -1,24 +1,19 @@
 export type Driver = {
   label: string
   score: number
-  previousScore: number
+  /** Assente se il report non ha confronto YoY (es. 2026). */
+  previousScore?: number
 }
 
 export type IndexKpi = {
   id: string
+  /** Nome ufficiale dal documento «KPI richiesti» — mai abbreviare in UI. */
   label: string
-  shortLabel: string
   definition: string
   score: number
-  previousScore: number
+  previousScore?: number
   target: number
   drivers: Driver[]
-}
-
-export type SplitItem = {
-  label: string
-  score: number
-  previousScore?: number
 }
 
 export type SurveyData = {
@@ -26,20 +21,18 @@ export type SurveyData = {
     title: string
     company: string
     year: number
-    previousYear: number
+    /** Se assente, UI senza confronti vs anno precedente (es. 2026). */
+    previousYear?: number
     invited: number
     respondents: number
     note: string
   }
   responseRate: {
     value: number
-    previousValue: number
+    previousValue?: number
+    /** Definizione ufficiale dal documento KPI. */
+    definition: string
     byArea: { label: string; rate: number; invited: number; respondents: number }[]
   }
   indices: IndexKpi[]
-  splits: {
-    engagementByArea: SplitItem[]
-    trustBySeniority: SplitItem[]
-    enablementByFunction: SplitItem[]
-  }
 }

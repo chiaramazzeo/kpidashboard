@@ -15,7 +15,7 @@ export function CountUp({
   decimals = 0,
   suffix = '',
   className,
-  duration = 1200,
+  duration = 1300,
 }: Props) {
   const { ref, value: animated } = useCountUp(value, duration, decimals)
 

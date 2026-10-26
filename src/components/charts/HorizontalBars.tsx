@@ -18,14 +18,14 @@ export function HorizontalBars({
   const { ref, inView } = useInView<HTMLDivElement>()
 
   return (
-    <div className="grid gap-[14px]" ref={ref}>
+    <div className="grid gap-4" ref={ref}>
       {items.map((item) => (
         <div
           className="grid grid-cols-[minmax(8rem,11rem)_1fr_auto] items-center gap-3 max-sm:grid-cols-1 max-sm:gap-1"
           key={item.label}
         >
-          <span className="text-[14.5px] text-ink-soft">{item.label}</span>
-          <div className="relative h-[22px] overflow-hidden border border-series-stroke bg-bg-warm">
+          <span className="text-sm text-ink-soft">{item.label}</span>
+          <div className="relative h-5 overflow-hidden border border-ink bg-bg-warm">
             <div
               className={`hbar-fill h-full${inView ? ' is-visible' : ''}`}
               style={{
@@ -34,7 +34,7 @@ export function HorizontalBars({
               }}
             />
           </div>
-          <span className="min-w-10 text-right font-mono text-[13px]">
+          <span className="min-w-10 text-right font-mono text-sm">
             {formatScore(item.value)}
           </span>
         </div>

@@ -2,36 +2,55 @@ import type { IndexKpi } from '../data/types'
 import { CountUp } from './CountUp'
 import { DeltaBadge } from './DeltaBadge'
 import { Reveal } from './Reveal'
+import { ScoreBar } from './charts/ScoreBar'
 
 type Props = {
   index: IndexKpi
-  previousYear: number
+  year: number
+  previousYear?: number
   href: string
   delay?: number
+  className?: string
 }
 
-export function KpiCard({ index, previousYear, href, delay = 0 }: Props) {
+export function KpiCard({
+  index,
+  year,
+  previousYear,
+  href,
+  delay = 0,
+  className = '',
+}: Props) {
   return (
-    <Reveal
-      delay={delay}
-      className="kpi-strip-item border-r border-line last:border-r-0 max-[900px]:odd:border-r-0 max-[900px]:[&:nth-child(-n+2)]:border-b max-[900px]:[&:nth-child(-n+2)]:border-line max-[520px]:border-r-0 max-[520px]:border-b max-[520px]:border-line max-[520px]:last:border-b-0"
-      as="div"
-    >
+    <Reveal delay={delay} className={className} as="div">
       <a
-        className="block px-4 py-5 text-inherit no-underline transition-colors duration-200 ease-[var(--ease-out)] hover:bg-accent-soft"
+        className="block h-full p-6 text-inherit no-underline transition-colors duration-200 ease-[var(--ease-out)] hover:bg-bg-elevated"
         href={href}
       >
-        <p className="m-0 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
-          {index.shortLabel}
+        <p className="m-0 text-lg font-semibold tracking-tight text-ink">
+          {index.label}
         </p>
-        <p className="mt-2 mb-1 font-display text-[clamp(2.2rem,4vw,3rem)] font-bold leading-none tracking-[-0.015em]">
-          <CountUp value={index.score} />
+        <p className="mt-3 mb-0 flex flex-wrap items-baseline gap-3 font-display text-[clamp(2.5rem,5.5vw,3.5rem)] font-bold leading-none tracking-[-0.02em]">
+          <CountUp value={index.score} duration={1300} />
+          <DeltaBadge
+            current={index.score}
+            previous={index.previousScore}
+            previousYear={previousYear}
+          />
         </p>
-        <DeltaBadge
-          current={index.score}
-          previous={index.previousScore}
-          previousYear={previousYear}
-        />
+        <div className="mt-6 grid gap-5">
+          {index.drivers.map((driver) => (
+            <ScoreBar
+              key={driver.label}
+              indexLabel={index.label}
+              label={driver.label}
+              value={driver.score}
+              previousValue={driver.previousScore}
+              year={year}
+              previousYear={previousYear}
+            />
+          ))}
+        </div>
       </a>
     </Reveal>
   )

@@ -63,7 +63,7 @@ export function useCountUp(target: number, duration = 1200, decimals = 0) {
   return { ref, value, started }
 }
 
-export function useInView<T extends HTMLElement>(threshold = 0.12) {
+export function useInView<T extends HTMLElement>(threshold = 0.2, fallbackMs = 5000) {
   const ref = useRef<T | null>(null)
   const [inView, setInView] = useState(false)
 
@@ -71,7 +71,7 @@ export function useInView<T extends HTMLElement>(threshold = 0.12) {
     const el = ref.current
     if (!el) return
 
-    if (isElementInView(el)) {
+    if (prefersReducedMotion() || isElementInView(el)) {
       setInView(true)
       return
     }
@@ -87,8 +87,16 @@ export function useInView<T extends HTMLElement>(threshold = 0.12) {
     )
 
     observer.observe(el)
-    return () => observer.disconnect()
-  }, [threshold])
+    const timer = window.setTimeout(() => {
+      setInView(true)
+      observer.disconnect()
+    }, fallbackMs)
+
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(timer)
+    }
+  }, [threshold, fallbackMs])
 
   return { ref, inView }
 }
