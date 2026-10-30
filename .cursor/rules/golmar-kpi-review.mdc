@@ -9,23 +9,29 @@ Quando rivedi o modifichi questo progetto, verifica **tutti** i punti seguenti (
 
 ## Stack e layout
 - Styling con **Tailwind CSS v4**; unità di spacing base **4px** (`@theme { --spacing: 4px }`).
-- CSS custom solo per: reveal, animazioni barre (scaleX/Y), header compact, print.
+- CSS custom solo per: reveal, animazioni barre (scaleX/Y), header compact, icone/tooltip, carousel, chat, print.
 - Non reintrodurre fogli BEM tipo `App.css` / `charts.css` / `tokens.css`.
+- Sezioni in **carosello orizzontale** (frecce, dots, swipe, chip nav) — non pagina continua verticale.
 
 ## Branding header
-- Titolo: **`GOALmar: {title}`** con KPI in **maiuscolo** nei dati (`Golmar 2028 KPI`).
-- **Niente corsivo** su GOAL.
+- Titolo: **solo `{title}`** (es. `Golmar 2026 KPI`) — **niente** prefisso `GOALmar:`.
 - Mark = **porta da calcio 3D rossa** (pali/traversa con spessore), **senza** quadrato/badge rosso dietro.
 - Titolo **hero** in cima; allo scroll diventa **compatto** (transizione).
 - Tracking titolo più stretto (`letter-spacing` negativo, circa `-0.03em`).
 - Header **opaco** (`bg-bg`), **non** trasparente / no backdrop-blur.
-- `--header-h` deve seguire l’**altezza reale** dell’header (misura DOM), così la nav non resta coperta.
+- `--header-h` / `--chrome-h` devono seguire l’**altezza reale** dell’header (misura DOM).
+- Chip **Livello 1–2–3** in alto a destra + switch **Admin / Utente** (demo).
+
+## Livelli proposta
+- L2 ⊃ L1, L3 ⊃ L2. Feature gated in `src/data/levels.ts`.
+- Ogni livello: sfondo distinto; novità con colore accentuato **e** badge “Nuovo in Livello N”.
+- L1 = solo baseline 2026; multi-anno / evoluzione / chat / survey da L2; CRUD KPI da L3.
 
 ## Navigazione sezioni (chip)
 - Link come **chip** (bordo `rounded-sm`), **niente** underline / riga sotto.
-- Attiva: solo **stroke + testo rosso accent**, non riempimento pieno (troppo “acceso”).
-- Al click la chip deve **restare evidenziata** durante lo scroll smooth (lock sync; non farsi sovrascrivere subito dallo scroll spy).
-- Padding **uguale** sopra/sotto nella barra; chip non tagliate / non coperte da header o bordo.
+- Attiva: solo **stroke + testo rosso accent**, non riempimento pieno.
+- Sync con **indice carosello** (non solo scroll spy verticale).
+- Padding **uguale** sopra/sotto nella barra; chip non tagliate.
 
 ## Colori
 - Accent / rosso: `#e10600` (non arancione `#ff2a00`).
@@ -35,12 +41,16 @@ Quando rivedi o modifichi questo progetto, verifica **tutti** i punti seguenti (
 
 ## Copy / UI
 - Footer: **niente** “Dati illustrativi”.
-- Hero meta label: solo **“rispondenti”** (non “rispondenti · invitati”).
-- Azioni header: **Scarica HTML** + **Scarica PDF**.
+- Hero meta: rispondenti; invitati con label **(stima demo)** se placeholder.
+- Azioni header: **Scarica HTML** + **Scarica PDF** (+ Importa CSV in L1+).
+- Overview = **solo score**; drill-down popolazioni nel modal.
 
 ## Export
 - **PDF**: testo e vettori (print browser), **non** raster html2canvas/immagine.
-- **HTML**: snapshot con **nav sezioni cliccabili** e scroll alle ancore; reveal forzati visibili.
+- In print: nascondere chat, modal, switch demo (`no-print`); slide carosello impilate.
+- **HTML**: snapshot con **nav sezioni cliccabili** e ancore; reveal forzati visibili.
 
 ## Contenuto
-- Non inventare KPI: i dati vivono in `src/data/kpis.ts`.
+- Non inventare KPI fuori contratto: dati in `src/data/kpis.ts` (Annex KPI + serie demo L2+).
+- Engagement = **eNPS** (−100…+100). Trust = **centrale** e **diretti** separati.
+- Affidabilità KPI esplicita (`ReliabilityBadge`).

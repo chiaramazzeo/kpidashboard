@@ -1,51 +1,36 @@
-import type { SurveyData } from '../data/types'
+import type { IndexKpi, SurveyData } from '../data/types'
 import { surveysByYear, type AvailableYear } from '../data/kpis'
 
 /**
- * CSV admin (UTF-8, virgola).
- *
- * Intestazione:
- * kind,id,label,score,previousScore,extra
- *
- * Esempi:
- * meta,year,,2028,,
- * meta,previousYear,,2027,,   (omettere o lasciare score vuoto per nessun YoY, es. 2026)
- * meta,invited,,420,,
- * meta,respondents,,336,,
- * response,value,,80,72,
- * area,HQ / Corporate,,88,,90|79
- * index,engagement,Engagement Index,74,69,78
- * driver,engagement,Soddisfazione in Golmar,76,71,
+ * CSV admin (UTF-8, virgola) — schema compatibile + merge su baseline Annex.
  */
 
 export const CSV_TEMPLATE = `kind,id,label,score,previousScore,extra
-meta,year,,2028,,
-meta,previousYear,,2027,,
+meta,year,,2026,,
 meta,company,Golmar,,,
-meta,invited,,420,,
-meta,respondents,,336,,
-response,value,,80,72,
-area,HQ / Corporate,,88,,90|79
-area,Vendite,,76,,120|91
-area,Operations,,81,,110|89
-area,R&D / Prodotto,,85,,60|51
-area,Supporto,,65,,40|26
-index,engagement,Engagement Index,74,69,78
-driver,engagement,Soddisfazione in Golmar,76,71,
-driver,engagement,Propensione a raccomandare,71,66,
-driver,engagement,Senso di appartenenza,75,70,
-index,enablement,Performance Enablement Index,68,64,75
-driver,enablement,Strumenti di lavoro,72,68,
-driver,enablement,Formazione,63,58,
-driver,enablement,Supporto manageriale,69,66,
-index,innovation,Innovation Index,61,58,70
-driver,innovation,Nuovi prodotti,64,60,
-driver,innovation,Canali di vendita,57,55,
-driver,innovation,Processi interni,62,59,
-index,trust,Trust in Management Index,70,73,75
-driver,trust,Comunicazione,72,74,
-driver,trust,Capacità di guida del cambiamento,66,71,
-driver,trust,Credibilità delle iniziative,72,74,
+meta,invited,,580,,
+meta,respondents,,323,,
+response,value,,56,,
+area,Dipendenti (totale),,57,,180|103
+area,Agenti (totale),,55,,400|220
+index,engagement,eNPS (Engagement),-15,,10
+driver,engagement,eNPS dipendenti,-24,,
+driver,engagement,eNPS agenti,-10,,
+index,enablement,Performance Enablement Index,64,,72
+driver,enablement,Organizzazione,65.2,,
+driver,enablement,Sviluppo professionale,52.9,,
+driver,enablement,Condizioni di lavoro,70,,
+driver,enablement,Clima,66.4,,
+driver,enablement,Collaborazione,73.4,,
+index,innovation,Innovation Index,60,,70
+driver,innovation,Identità e strategia (Vision),61.5,,
+driver,innovation,Comunicazione (Participative safety),59.3,,
+index,trust-central,Trust in Management — Centrale,58,,70
+driver,trust-central,Comunicazione strategica,57,,
+driver,trust-central,Trasparenza della strategia,59,,
+index,trust-direct,Trust in Management — Diretti,68,,75
+driver,trust-direct,Leadership,69,,
+driver,trust-direct,Supporto del responsabile,67,,
 `
 
 function splitCsvLine(line: string): string[] {
@@ -80,7 +65,6 @@ function parseNum(raw: string | undefined, fallback = 0) {
   return Number.isFinite(n) ? n : fallback
 }
 
-/** Restituisce undefined se la cella è vuota (es. anno senza YoY). */
 function parseOptionalNum(raw: string | undefined): number | undefined {
   if (raw === undefined || raw === '') return undefined
   const n = Number(raw.replace(',', '.'))
@@ -114,20 +98,21 @@ export function parseSurveyCsv(text: string): CsvParseResult {
   if (idx.kind < 0 || idx.id < 0) {
     return {
       ok: false,
-      error: 'Intestazione CSV non valida: servono almeno kind,id,label,score,previousScore,extra.',
+      error:
+        'Intestazione CSV non valida: servono almeno kind,id,label,score,previousScore,extra.',
     }
   }
 
   const col = (cells: string[], key: keyof typeof idx) =>
     idx[key] >= 0 ? cells[idx[key]] ?? '' : ''
 
-  let year = 2028
-  let previousYear: number | undefined = 2027
+  let year = 2026
+  let previousYear: number | undefined
   let company = 'Golmar'
-  let invited = 420
-  let respondents = 336
-  let responseValue = 80
-  let responsePrevious: number | undefined = 72
+  let invited = 580
+  let respondents = 323
+  let responseValue = 56
+  let responsePrevious: number | undefined
   let sawPreviousYearMeta = false
   const areas: SurveyData['responseRate']['byArea'] = []
   const indexMap = new Map<
@@ -174,6 +159,7 @@ export function parseSurveyCsv(text: string): CsvParseResult {
         rate: score,
         invited: parseNum(invRaw, 0),
         respondents: parseNum(respRaw, 0),
+        invitedIsPlaceholder: true,
       })
       continue
     }
@@ -211,19 +197,15 @@ export function parseSurveyCsv(text: string): CsvParseResult {
     }
   }
 
-  // 2026 (o previousYear vuoto nel CSV): nessun confronto YoY.
   if (year === 2026 || (sawPreviousYearMeta && previousYear === undefined)) {
     previousYear = undefined
     responsePrevious = undefined
   }
 
   const base = structuredClone(surveysByYear[year as AvailableYear])
-  const order = ['engagement', 'enablement', 'innovation', 'trust'] as const
-  const definitions = Object.fromEntries(
-    base.indices.map((i) => [i.id, i.definition]),
-  )
+  const order = base.indices.map((i) => i.id)
 
-  const indices = order.map((id) => {
+  const indices: IndexKpi[] = order.map((id) => {
     const row = indexMap.get(id)
     const fallback = base.indices.find((i) => i.id === id)!
     if (!row) return fallback
@@ -236,13 +218,12 @@ export function parseSurveyCsv(text: string): CsvParseResult {
           )
         : fallback.drivers
     return {
-      id,
+      ...fallback,
       label: row.label || fallback.label,
-      definition: definitions[id] ?? fallback.definition,
       score: row.score,
       ...(previousYear !== undefined && row.previousScore !== undefined
         ? { previousScore: row.previousScore }
-        : {}),
+        : { previousScore: undefined }),
       target: row.target || fallback.target,
       drivers,
     }
@@ -256,14 +237,15 @@ export function parseSurveyCsv(text: string): CsvParseResult {
       ...(previousYear !== undefined ? { previousYear } : {}),
       invited,
       respondents,
+      invitedIsPlaceholder: true,
       note: base.meta.note,
     },
     responseRate: {
+      ...base.responseRate,
       value: responseValue,
       ...(responsePrevious !== undefined
         ? { previousValue: responsePrevious }
-        : {}),
-      definition: base.responseRate.definition,
+        : { previousValue: undefined }),
       byArea: areas.length > 0 ? areas : base.responseRate.byArea,
     },
     indices,
@@ -272,7 +254,7 @@ export function parseSurveyCsv(text: string): CsvParseResult {
   return { ok: true, data, year: year as AvailableYear }
 }
 
-const STORAGE_KEY = 'golmar-kpi-surveys-v2'
+const STORAGE_KEY = 'golmar-kpi-surveys-v3'
 
 export function loadStoredSurveys(): Partial<Record<AvailableYear, SurveyData>> {
   try {

@@ -8,6 +8,10 @@ type Props = {
   suffix?: string
   className?: string
   duration?: number
+  /** Se false (slide non attiva), resta a 0; al focus anima. */
+  active?: boolean
+  /** Prefisso «+» sui positivi (es. eNPS). */
+  signed?: boolean
 }
 
 export function CountUp({
@@ -16,11 +20,20 @@ export function CountUp({
   suffix = '',
   className,
   duration = 1300,
+  active = true,
+  signed = false,
 }: Props) {
-  const { ref, value: animated } = useCountUp(value, duration, decimals)
+  const { ref, value: animated } = useCountUp(
+    value,
+    duration,
+    decimals,
+    active,
+  )
+  const sign = signed && animated > 0 ? '+' : ''
 
   return (
     <span className={className} ref={ref as Ref<HTMLSpanElement>}>
+      {sign}
       {formatScore(animated, decimals)}
       {suffix}
     </span>

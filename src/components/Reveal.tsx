@@ -6,6 +6,8 @@ type Props = {
   className?: string
   delay?: number
   as?: 'div' | 'section' | 'li' | 'article'
+  /** Forza visibile (slide carosello attiva). */
+  force?: boolean
 }
 
 export function Reveal({
@@ -13,8 +15,9 @@ export function Reveal({
   className = '',
   delay = 0,
   as: Tag = 'div',
+  force = false,
 }: Props) {
-  const { ref, inView } = useInView<HTMLElement>(0.15)
+  const { ref, inView } = useInView<HTMLElement>(0.05, 400, force)
 
   const style = {
     '--reveal-delay': `${delay}ms`,

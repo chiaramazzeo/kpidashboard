@@ -1,3 +1,9 @@
+/**
+ * Import CSV survey — dialog controllato.
+ *
+ * SHADCN: prima backdrop+panel manuali; ora `Dialog` + `Button`.
+ * `onOpenChange` chiude su overlay / Escape (Radix). Classe `no-print` obbligatoria.
+ */
 import { useRef, useState } from 'react'
 import {
   CSV_TEMPLATE,
@@ -6,6 +12,15 @@ import {
 } from '../utils/csvSurvey'
 import type { SurveyData } from '../data/types'
 import type { AvailableYear } from '../data/kpis'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 type Props = {
   open: boolean
@@ -17,8 +32,6 @@ export function CsvImportDialog({ open, onClose, onImported }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
-
-  if (!open) return null
 
   const applyResult = (result: CsvParseResult) => {
     if (!result.ok) {
@@ -51,45 +64,37 @@ export function CsvImportDialog({ open, onClose, onImported }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 p-4"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose()
       }}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="csv-import-title"
-        className="w-full max-w-md border border-ink bg-bg-elevated p-5"
+      <DialogContent
+        className="no-print z-[60] sm:max-w-md"
+        showCloseButton={false}
       >
-        <h2
-          id="csv-import-title"
-          className="m-0 font-display text-xl font-bold tracking-tight"
-        >
-          Importa CSV
-        </h2>
-        <p className="mt-2 mb-4 text-sm text-muted">
-          Carica i dati KPI per l’anno indicato nel file. Scarica il template per
-          il formato corretto.
-        </p>
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl font-bold tracking-tight">
+            Importa CSV
+          </DialogTitle>
+          <DialogDescription className="text-muted">
+            Carica i dati KPI per l’anno indicato nel file. Scarica il template
+            per il formato corretto.
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="appearance-none rounded-sm border border-ink bg-bg px-3 py-2 text-sm font-medium"
-            onClick={downloadTemplate}
-          >
+          <Button type="button" variant="outline" onClick={downloadTemplate}>
             Scarica template
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="appearance-none rounded-sm border border-ink bg-accent-secondary px-3 py-2 text-sm font-medium text-white"
+            variant="secondary"
             onClick={() => fileRef.current?.click()}
           >
             Scegli file CSV
-          </button>
+          </Button>
           <input
             ref={fileRef}
             type="file"
@@ -100,22 +105,20 @@ export function CsvImportDialog({ open, onClose, onImported }: Props) {
         </div>
 
         {error && (
-          <p className="mt-4 mb-0 text-sm text-negative" role="alert">
+          <p className="mb-0 text-sm text-negative" role="alert">
             {error}
           </p>
         )}
         {preview && !error && (
-          <p className="mt-4 mb-0 text-sm text-positive">{preview}</p>
+          <p className="mb-0 text-sm text-positive">{preview}</p>
         )}
 
-        <button
-          type="button"
-          className="mt-5 appearance-none border-0 bg-transparent p-0 text-sm text-muted underline"
-          onClick={onClose}
-        >
-          Annulla
-        </button>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button type="button" variant="link" onClick={onClose}>
+            Annulla
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

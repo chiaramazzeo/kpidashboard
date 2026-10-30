@@ -1,75 +1,128 @@
 /**
- * REVIEW / DESIGN INTENT (Golmar 2028 KPI)
- * Criteri utente da verificare in revisione completa — vedi anche `.cursor/rules/golmar-kpi-review.mdc`.
- *
- * - Tailwind v4, spacing base 4px; niente ritorno a CSS BEM legacy.
- * - Header: GOALmar + KPI maiuscolo; porta 3D rossa senza box; hero→compact allo scroll;
- *   fondo opaco; --header-h misurato dal DOM così la nav non viene coperta.
- * - Nav: chip con stroke rosso se attiva (no fill pieno, no underline); lock al click
- *   durante smooth scroll; padding verticale simmetrico.
- * - Colori: accent #e10600, secondary #f87874, series-c #80a7ff; no border-right sulle hbar.
- * - Export: PDF via print (testo/vettori); HTML con nav ancore cliccabili.
- * - Copy: solo “rispondenti” in hero; niente “Dati illustrativi” in footer.
+ * Shell Golmar KPI — chrome, carousel, modal, export, chat.
+ * Contenuto slide: `src/components/slides/*`.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { HorizontalBars } from './components/charts/HorizontalBars'
 import { ParticipationStack } from './components/charts/ParticipationStack'
-import { SlopeChart } from './components/charts/SlopeChart'
-import { CountUp } from './components/CountUp'
+import { Carousel, CarouselSlide } from './components/Carousel'
+import { ChartModal } from './components/ChartModal'
+import {
+  ChatBar,
+  ChatFloat,
+  ChatPanel,
+  ChatPeek,
+  ChatReplyBridge,
+} from './components/ChatDock'
 import { CsvImportDialog } from './components/CsvImportDialog'
-import { DeltaBadge } from './components/DeltaBadge'
-import { DriverBoxes } from './components/DriverBoxes'
-import { EvolutionSection } from './components/EvolutionSection'
 import { Header } from './components/Header'
-import { InsightBox } from './components/InsightBox'
-import { KpiCard } from './components/KpiCard'
-import { Reveal } from './components/Reveal'
+import { KpiAdminPanel } from './components/KpiAdminPanel'
+import { LabeledTerm } from './components/InfoTip'
+import { PrimaryNav } from './components/PrimaryNav'
 import { SectionNav } from './components/SectionNav'
 import { SiteChrome } from './components/SiteChrome'
-import { YearLegend } from './components/YearLegend'
-import {
-  availableYears,
-  surveysByYear,
-  type AvailableYear,
-} from './data/kpis'
-import type { SurveyData } from './data/types'
-import { exportDashboardHtml } from './utils/exportHtml'
-import { exportDashboardPdf } from './utils/exportPdf'
+import { SurveyPanel } from './components/SurveyPanel'
+import { YearCompare } from './components/YearCompare'
+import { IndexSlide } from './components/slides/IndexSlide'
+import { OverviewSlide } from './components/slides/OverviewSlide'
+import { ResponseSlide } from './components/slides/ResponseSlide'
+import { DemoProvider, useDemo } from './context/DemoContext'
+import { LEVEL_THEMES } from './data/levels'
+import { sectionsForLevel } from './data/nav'
+import { surveysByYear, type AvailableYear } from './data/kpis'
+import type { IndexKpi, SurveyData } from './data/types'
+import { indexToCsv, responseToCsv } from './utils/chartCsv'
 import {
   loadStoredSurveys,
   saveStoredSurvey,
 } from './utils/csvSurvey'
-import { indexInsight, responseInsight } from './utils/insights'
-import { yearCssVar } from './utils/yearColors'
+import { exportDashboardHtml } from './utils/exportHtml'
+import { exportDashboardPdf } from './utils/exportPdf'
+import { formatKpiValue } from './utils/format'
+import {
+  getDriversAcrossYears,
+  getIndexAcrossYears,
+  getPopulationAcrossYears,
+  getResponseAcrossYears,
+  getResponseAreasAcrossYears,
+  previousAmong,
+  responseInYear,
+  scoreInYear,
+} from './utils/yearCompare'
 
-const sectionLabel =
-  'm-0 mb-3 font-mono text-xs uppercase tracking-[0.08em] text-muted'
-const sectionHead =
-  'mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3'
-const sectionScore =
-  'm-0 flex items-baseline gap-3 font-display text-[clamp(2.5rem,6vw,3.5rem)] font-bold leading-none tracking-[-0.015em]'
-const sectionClass =
-  'section border-b border-line py-11 [scroll-margin-top:calc(var(--chrome-h,var(--header-h))+var(--sticky-gap,8px))]'
+type ModalState =
+  | { kind: 'response' }
+  | { kind: 'index'; id: string }
+  | { kind: 'overview'; id: string }
+  | null
 
-function App() {
+function AppShell() {
   const reportRef = useRef<HTMLElement>(null)
+  const {
+    level,
+    year,
+    area,
+    feature,
+    featureNew,
+    chatOpen,
+    chatPeek,
+    compareYears,
+    overviewMode,
+    setOverviewMode,
+    setYear,
+    pendingSection,
+    clearPendingSection,
+  } = useDemo()
+  const multi = feature('multiYear')
+  const prevYear = multi ? previousAmong(compareYears, year) : undefined
   const [exporting, setExporting] = useState(false)
-  const [year, setYear] = useState<AvailableYear>(2028)
   const [csvOpen, setCsvOpen] = useState(false)
   const [overrides, setOverrides] = useState<
     Partial<Record<AvailableYear, SurveyData>>
   >({})
+  const [slide, setSlide] = useState(0)
+  const [modal, setModal] = useState<ModalState>(null)
+  const [csvContext, setCsvContext] = useState<string | null>(null)
+  const [chatBusy, setChatBusy] = useState(false)
+
+  const sections = useMemo(
+    () => sectionsForLevel(level, area),
+    [level, area],
+  )
 
   useEffect(() => {
     setOverrides(loadStoredSurveys())
   }, [])
+
+  useEffect(() => {
+    setSlide(0)
+    setModal(null)
+  }, [level, area])
+
+  useEffect(() => {
+    if (chatOpen || chatPeek) setModal(null)
+  }, [chatOpen, chatPeek])
+
+  useEffect(() => {
+    if (slide >= sections.length) setSlide(Math.max(0, sections.length - 1))
+  }, [sections, slide])
+
+  useEffect(() => {
+    if (!pendingSection) return
+    const i = sections.findIndex((s) => s.id === pendingSection)
+    if (i >= 0) setSlide(i)
+    clearPendingSection()
+  }, [pendingSection, sections, clearPendingSection])
 
   const data = useMemo(
     () => overrides[year] ?? surveysByYear[year],
     [overrides, year],
   )
   const { meta, responseRate, indices } = data
-  const [engagement, enablement, innovation, trust] = indices
+  const activeId = sections[slide]?.id ?? 'response'
+
+  useEffect(() => {
+    document.title = meta.title
+  }, [meta.title])
 
   const handleExportPdf = () => {
     if (exporting) return
@@ -97,24 +150,89 @@ function App() {
     }
   }
 
+  const openIndexModal = (index: IndexKpi, kind: 'index' | 'overview') => {
+    setCsvContext(indexToCsv(index, meta.year))
+    setModal({ kind, id: index.id })
+  }
+
+  const responseBreakdowns = [
+    {
+      label: 'Dipendenti',
+      score: responseRate.byPopulation.employees.score,
+      scale: 'percent' as const,
+      yearScores: multi
+        ? getPopulationAcrossYears('response', 'employees', compareYears)
+        : undefined,
+      previousScore: responseRate.byPopulation.employees.previousScore,
+    },
+    {
+      label: 'Agenti',
+      score: responseRate.byPopulation.agents.score,
+      scale: 'percent' as const,
+      yearScores: multi
+        ? getPopulationAcrossYears('response', 'agents', compareYears)
+        : undefined,
+      previousScore: responseRate.byPopulation.agents.previousScore,
+    },
+  ]
+
+  const indexBreakdowns = (index: IndexKpi) =>
+    (['employees', 'agents'] as const).map((pop) => {
+      const slice = index.byPopulation[pop]
+      const label = pop === 'employees' ? 'Dipendenti' : 'Agenti'
+      return {
+        label,
+        score: slice.score,
+        scale: index.scale,
+        yearScores: multi
+          ? getPopulationAcrossYears(index.id, pop, compareYears)
+          : undefined,
+        previousScore: slice.previousScore,
+        detailByYear: multi
+          ? (slice.drivers ?? []).map((d) => ({
+              label: d.label,
+              byYear: compareYears.map((y) => {
+                const src = surveysByYear[y].indices.find(
+                  (i) => i.id === index.id,
+                )
+                const hit = src?.byPopulation[pop].drivers?.find(
+                  (x) => x.label === d.label,
+                )
+                return { year: y, score: hit?.score ?? 0 }
+              }),
+            }))
+          : undefined,
+      }
+    })
+
+  const modalIndex =
+    modal?.kind === 'index' || modal?.kind === 'overview'
+      ? indices.find((i) => i.id === modal.id)
+      : null
+
   return (
-    <div className={exporting ? 'exporting' : undefined}>
+    <div
+      className={`flex min-h-dvh flex-col ${exporting ? 'exporting' : ''}`}
+    >
       <SiteChrome>
         <Header
           title={meta.title}
-          year={year}
-          availableYears={availableYears}
-          onYearChange={(next) => {
-            if ((availableYears as readonly number[]).includes(next)) {
-              setYear(next as AvailableYear)
-            }
-          }}
           onExportPdf={handleExportPdf}
           onExportHtml={handleExportHtml}
           onImportCsv={() => setCsvOpen(true)}
           exporting={exporting}
         />
-        <SectionNav />
+        <PrimaryNav />
+        <SectionNav
+          activeId={activeId}
+          onSelect={(id) => {
+            const i = sections.findIndex((s) => s.id === id)
+            if (i >= 0) {
+              setSlide(i)
+              setModal(null)
+            }
+          }}
+        />
       </SiteChrome>
 
       <CsvImportDialog
@@ -126,227 +244,205 @@ function App() {
         }}
       />
 
-      <main className="report mx-auto max-w-report px-5 pb-14" ref={reportRef}>
-        <section className={`${sectionClass} pt-10`} id="response">
-          <Reveal delay={0}>
-            <p className={sectionLabel}>Response Rate</p>
-            <p className="mt-2 mb-0 max-w-3xl text-sm text-muted">
-              {responseRate.definition}
-            </p>
-          </Reveal>
-          <Reveal delay={80} className="mb-8">
-            <p className="m-0 font-display text-[clamp(5rem,18vw,10rem)] font-extrabold leading-[0.92] tracking-[-0.02em]">
-              <CountUp value={responseRate.value} duration={1400} />
-              <span className="ml-[0.05em] align-super text-[0.35em] font-bold text-muted">
-                %
-              </span>
-            </p>
-            <DeltaBadge
-              current={responseRate.value}
-              previous={responseRate.previousValue}
-              previousYear={meta.previousYear}
-            />
-            <p className="mt-4 mb-0 flex flex-col gap-1 font-mono text-xs text-muted">
-              <span className="text-base text-ink">
-                <CountUp value={meta.respondents} /> / <CountUp value={meta.invited} />
-              </span>
-              <span>rispondenti</span>
-            </p>
-          </Reveal>
-          <Reveal delay={80}>
-            <ParticipationStack items={responseRate.byArea} year={meta.year} />
-          </Reveal>
-          <Reveal delay={200} className="mt-6">
-            <InsightBox>{responseInsight(responseRate.byArea)}</InsightBox>
-          </Reveal>
-        </section>
-
-        <section className={sectionClass} id="overview">
-          <Reveal className="mb-4 flex flex-wrap items-end justify-between gap-4">
-            <p className={`${sectionLabel} mb-0`}>Overview</p>
-            <YearLegend year={meta.year} previousYear={meta.previousYear} />
-          </Reveal>
-          <div className="my-2 grid grid-cols-1 border border-ink sm:grid-cols-2">
-            {indices.map((index, i) => (
-              <KpiCard
-                key={index.id}
-                index={index}
-                year={meta.year}
-                previousYear={meta.previousYear}
-                href={`#${index.id}`}
-                delay={80 + i * 70}
-                className={[
-                  'border-ink',
-                  i < 2 ? 'sm:border-b' : '',
-                  i % 2 === 0 ? 'sm:border-r' : '',
-                  i < indices.length - 1 ? 'max-sm:border-b' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              />
-            ))}
-          </div>
-        </section>
-
-        <EvolutionSection
-          indices={indices}
-          year={meta.year}
-          previousYear={meta.previousYear}
-        />
-
-        <section className={sectionClass} id="engagement">
-          <Reveal>
-            <div className={sectionHead}>
-              <p className={`${sectionLabel} mb-0`}>Engagement Index</p>
-              <p className={sectionScore}>
-                <CountUp value={engagement.score} />
-                <DeltaBadge
-                  current={engagement.score}
-                  previous={engagement.previousScore}
-                  previousYear={meta.previousYear}
-                />
-              </p>
-            </div>
-            <p className="mt-0 mb-6 max-w-3xl text-sm text-muted">
-              {engagement.definition}
-            </p>
-          </Reveal>
-          <Reveal delay={80} className="max-w-full">
-            <HorizontalBars
-              color={yearCssVar(meta.year)}
-              items={engagement.drivers.map((d) => ({
-                label: d.label,
-                value: d.score,
-              }))}
-            />
-          </Reveal>
-          <Reveal delay={200} className="mt-6">
-            <InsightBox>
-              {indexInsight(engagement, meta.previousYear)}
-            </InsightBox>
-          </Reveal>
-        </section>
-
-        <section className={sectionClass} id="enablement">
-          <Reveal>
-            <div className={sectionHead}>
-              <p className={`${sectionLabel} mb-0`}>Performance Enablement Index</p>
-              <p className={sectionScore}>
-                <CountUp value={enablement.score} />
-                <DeltaBadge
-                  current={enablement.score}
-                  previous={enablement.previousScore}
-                  previousYear={meta.previousYear}
-                />
-              </p>
-            </div>
-            <p className="mt-0 mb-6 max-w-3xl text-sm text-muted">
-              {enablement.definition}
-            </p>
-          </Reveal>
-          <DriverBoxes
-            indexLabel={enablement.label}
-            drivers={enablement.drivers}
-            year={meta.year}
-            previousYear={meta.previousYear}
-          />
-          <Reveal delay={200} className="mt-6">
-            <InsightBox>
-              {indexInsight(enablement, meta.previousYear)}
-            </InsightBox>
-          </Reveal>
-        </section>
-
-        <section className={sectionClass} id="innovation">
-          <Reveal>
-            <div className={sectionHead}>
-              <p className={`${sectionLabel} mb-0`}>Innovation Index</p>
-              <p className={sectionScore}>
-                <CountUp value={innovation.score} />
-                <DeltaBadge
-                  current={innovation.score}
-                  previous={innovation.previousScore}
-                  previousYear={meta.previousYear}
-                />
-              </p>
-            </div>
-            <p className="mt-0 mb-6 max-w-3xl text-sm text-muted">
-              {innovation.definition}
-            </p>
-          </Reveal>
-          <DriverBoxes
-            indexLabel={innovation.label}
-            drivers={innovation.drivers}
-            year={meta.year}
-            previousYear={meta.previousYear}
-          />
-          <Reveal delay={200} className="mt-6">
-            <InsightBox>
-              {indexInsight(innovation, meta.previousYear)}
-            </InsightBox>
-          </Reveal>
-        </section>
-
-        <section className={sectionClass} id="trust">
-          <Reveal>
-            <div className={sectionHead}>
-              <p className={`${sectionLabel} mb-0`}>Trust in Management Index</p>
-              <p className={sectionScore}>
-                <CountUp value={trust.score} />
-                <DeltaBadge
-                  current={trust.score}
-                  previous={trust.previousScore}
-                  previousYear={meta.previousYear}
-                />
-              </p>
-            </div>
-            <p className="mt-0 mb-6 max-w-3xl text-sm text-muted">
-              {trust.definition}
-            </p>
-          </Reveal>
-          <div
-            className={
-              meta.previousYear !== undefined &&
-              trust.previousScore !== undefined
-                ? 'grid grid-cols-[minmax(12rem,16rem)_1fr] items-center gap-8 max-[900px]:grid-cols-1'
-                : 'grid grid-cols-1'
-            }
+      <div
+        className="flex min-h-0 w-full flex-1"
+        style={{
+          height: 'calc(100dvh - var(--chrome-h, 8rem))',
+          maxHeight: 'calc(100dvh - var(--chrome-h, 8rem))',
+        }}
+      >
+        <main
+          className={`report mx-auto flex min-h-0 min-w-0 w-full max-w-report flex-1 flex-col overflow-hidden px-5 pt-4 ${
+            feature('chat') && !chatOpen ? 'pb-20' : 'pb-2'
+          }`}
+          ref={reportRef}
+        >
+          <Carousel
+            index={slide}
+            onIndexChange={(i) => {
+              setSlide(i)
+              setModal(null)
+            }}
+            count={sections.length}
+            labels={sections.map((s) => s.label)}
           >
-            {meta.previousYear !== undefined &&
-              trust.previousScore !== undefined && (
-                <Reveal delay={80} className="max-w-full">
-                  <SlopeChart
-                    previousLabel={String(meta.previousYear)}
-                    currentLabel={String(meta.year)}
-                    previous={trust.previousScore}
-                    current={trust.score}
-                    previousYear={meta.previousYear}
-                    year={meta.year}
-                  />
-                </Reveal>
-              )}
-            <Reveal delay={80} className="max-w-full">
-              <HorizontalBars
-                color={yearCssVar(meta.year)}
-                items={[...trust.drivers]
-                  .sort((a, b) => b.score - a.score)
-                  .map((d) => ({ label: d.label, value: d.score }))}
-              />
-            </Reveal>
-          </div>
-          <Reveal delay={200} className="mt-6">
-            <InsightBox>{indexInsight(trust, meta.previousYear)}</InsightBox>
-          </Reveal>
-        </section>
-      </main>
+            {sections.map((section) => {
+              const active = section.id === activeId
+              return (
+                <CarouselSlide key={section.id} id={section.id} active={active}>
+                  {section.id === 'response' ? (
+                    <ResponseSlide
+                      active={active}
+                      multi={multi}
+                      year={year}
+                      data={data}
+                      prevYear={prevYear}
+                      prevValue={
+                        prevYear !== undefined
+                          ? responseInYear(prevYear)
+                          : undefined
+                      }
+                      onOpen={() => {
+                        setCsvContext(responseToCsv(responseRate, data))
+                        setModal({ kind: 'response' })
+                      }}
+                    />
+                  ) : null}
 
-      <footer className="mx-auto flex max-w-report flex-wrap justify-between gap-3 px-5 pb-10 pt-6 font-mono text-xs text-muted">
-        <span>
-          {meta.company} · {meta.title}
-        </span>
-      </footer>
+                  {section.id === 'overview' ? (
+                    <OverviewSlide
+                      active={active}
+                      multi={multi}
+                      year={year}
+                      overviewMode={overviewMode}
+                      setOverviewMode={setOverviewMode}
+                      indices={indices}
+                      compareYears={compareYears}
+                      showEvolutionNew={featureNew('evolutionChart')}
+                      onOpenIndex={(index) => openIndexModal(index, 'overview')}
+                    />
+                  ) : null}
+
+                  {indices.map((index) =>
+                    section.id === index.id ? (
+                      <IndexSlide
+                        key={index.id}
+                        index={index}
+                        active={active}
+                        multi={multi}
+                        year={year}
+                        prevYear={prevYear}
+                        prevScore={
+                          prevYear !== undefined
+                            ? scoreInYear(index.id, prevYear)
+                            : undefined
+                        }
+                        onOpen={() => openIndexModal(index, 'index')}
+                      />
+                    ) : null,
+                  )}
+
+                  {section.id === 'survey' ? <SurveyPanel /> : null}
+                  {section.id === 'kpi-admin' ? <KpiAdminPanel /> : null}
+                </CarouselSlide>
+              )
+            })}
+          </Carousel>
+
+          <footer className="no-print shrink-0 pt-2 pb-1 font-mono text-xs text-muted">
+            {meta.title}
+            {' · '}
+            {meta.note ??
+              (year > 2026
+                ? 'Serie demo (non risultati ufficiali).'
+                : 'Baseline Annex KPI.')}
+            {` · ${LEVEL_THEMES[level].short}`}
+          </footer>
+        </main>
+
+        <ChatPanel busy={chatBusy} />
+      </div>
+
+      <ChatReplyBridge csvContext={csvContext} onBusy={setChatBusy} />
+
+      <ChartModal
+        open={modal?.kind === 'response'}
+        onClose={() => setModal(null)}
+        title="Response Rate"
+        subtitle={responseRate.definition}
+        csv={responseToCsv(responseRate, data)}
+        csvName={`response-${meta.year}.csv`}
+        breakdowns={responseBreakdowns}
+        yearScores={
+          multi ? getResponseAcrossYears(compareYears) : undefined
+        }
+      >
+        {multi && compareYears.length > 1 ? (
+          <div className="space-y-5">
+            {getResponseAreasAcrossYears(compareYears).map(
+              ({ year: y, items }) => (
+                <div key={y}>
+                  <p className="m-0 mb-2 font-mono text-xs uppercase tracking-[0.08em] text-muted">
+                    Aree · {y}
+                  </p>
+                  <ParticipationStack items={items} year={y} />
+                </div>
+              ),
+            )}
+          </div>
+        ) : (
+          <ParticipationStack items={responseRate.byArea} year={meta.year} />
+        )}
+      </ChartModal>
+
+      {modalIndex ? (
+        <ChartModal
+          open
+          onClose={() => setModal(null)}
+          title={modalIndex.label}
+          subtitle={modalIndex.definition}
+          csv={indexToCsv(modalIndex, meta.year)}
+          csvName={`${modalIndex.id}-${meta.year}.csv`}
+          breakdowns={indexBreakdowns(modalIndex)}
+          target={modalIndex.target}
+          scale={modalIndex.scale}
+          yearScores={
+            multi
+              ? getIndexAcrossYears(modalIndex.id, compareYears)
+              : undefined
+          }
+        >
+          {multi && compareYears.length > 1 ? (
+            <div className="space-y-4">
+              <p className="m-0 font-mono text-xs uppercase tracking-[0.08em] text-muted">
+                Driver nel tempo
+              </p>
+              {getDriversAcrossYears(modalIndex.id, compareYears).map((d) => (
+                <div key={d.label}>
+                  <p className="m-0 mb-1.5 text-center text-sm font-medium">
+                    <LabeledTerm label={d.label} />
+                  </p>
+                  <div className="flex justify-center">
+                    <YearCompare
+                      items={d.byYear}
+                      focusYear={year}
+                      label={`Andamento ${d.label}`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {modalIndex.drivers.map((d) => (
+                <div
+                  key={d.label}
+                  className="flex items-baseline justify-between gap-3 border-b border-line py-2"
+                >
+                  <p className="m-0 text-sm font-medium">
+                    <LabeledTerm label={d.label} />
+                  </p>
+                  <p className="m-0 font-mono text-sm tabular-nums">
+                    {formatKpiValue(d.score, modalIndex.scale)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </ChartModal>
+      ) : null}
+
+      <ChatPeek />
+      <ChatFloat busy={chatBusy} />
+      <ChatBar />
     </div>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <DemoProvider>
+      <AppShell />
+    </DemoProvider>
+  )
+}

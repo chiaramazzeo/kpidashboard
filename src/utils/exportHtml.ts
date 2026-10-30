@@ -25,11 +25,33 @@ function collectDocumentCss(): string {
 
 function prepareClone(element: HTMLElement): string {
   const clone = element.cloneNode(true) as HTMLElement
-  clone
-    .querySelectorAll('.reveal, .hbar-fill, .gbar-bar, .bullet-fill')
-    .forEach((node) => {
-      node.classList.add('is-visible')
-    })
+  clone.querySelectorAll('.reveal').forEach((node) => {
+    node.classList.add('is-visible')
+  })
+  // Carosello → slide impilate, senza transform
+  const track = clone.querySelector('.carousel__track') as HTMLElement | null
+  if (track) {
+    track.style.transform = 'none'
+    track.style.width = '100%'
+    track.style.display = 'block'
+  }
+  const viewport = clone.querySelector('.carousel__viewport') as HTMLElement | null
+  if (viewport) {
+    viewport.style.height = 'auto'
+    viewport.style.overflow = 'visible'
+    viewport.style.scrollSnapType = 'none'
+  }
+  clone.querySelectorAll('.carousel__slide').forEach((node) => {
+    const el = node as HTMLElement
+    el.style.flex = 'none'
+    el.style.width = '100%'
+    el.style.maxWidth = '100%'
+    el.style.height = 'auto'
+    el.style.overflow = 'visible'
+    el.style.visibility = 'visible'
+    el.style.display = 'block'
+  })
+  clone.querySelectorAll('.no-print').forEach((node) => node.remove())
   return clone.outerHTML
 }
 
@@ -41,7 +63,7 @@ const linkActive = 'is-active border-accent bg-transparent text-accent'
 function buildSectionNavHtml(): string {
   const links = SECTION_LINKS.map(
     (link, index) =>
-      `<a href="${link.href}" class="${linkBase} ${index === 0 ? linkActive : linkIdle}"${index === 0 ? ' aria-current="true"' : ''}>${link.label}</a>`,
+      `<a href="#${link.id}" class="${linkBase} ${index === 0 ? linkActive : linkIdle}"${index === 0 ? ' aria-current="true"' : ''}>${link.label}</a>`,
   ).join('\n          ')
 
   return `<nav class="section-nav sticky top-0 z-30 border-b border-line bg-bg" aria-label="Sezioni">
@@ -63,7 +85,7 @@ function buildSectionNavHtml(): string {
 
 const NAV_SCRIPT = `
 (function () {
-  var ids = [${SECTION_LINKS.map((l) => JSON.stringify(l.href.slice(1))).join(', ')}];
+  var ids = [${SECTION_LINKS.map((l) => JSON.stringify(l.id)).join(', ')}];
   var links = Array.prototype.slice.call(document.querySelectorAll('.section-nav__scroller a'));
   var scroller = document.querySelector('.section-nav__scroller');
   var fadeL = document.querySelector('.section-nav__fade--left');
@@ -233,11 +255,6 @@ ${css}
 /* Snapshot: force revealed content + bar fills visible */
 .reveal {
   opacity: 1 !important;
-  transform: none !important;
-}
-.hbar-fill,
-.gbar-bar,
-.bullet-fill {
   transform: none !important;
 }
 html {

@@ -1,241 +1,176 @@
 /**
- * REVIEW — Section nav (chip)
- * - Chip con bordo; attiva = stroke+testo accent, NON fill rosso pieno.
- * - Niente underline / border-bottom di selezione.
- * - Al click: lock activeId durante smooth scroll (altrimenti lo spy la “spegne”).
- * - Dentro SiteChrome sticky (header+nav uniti, niente gap).
- * - Allo scroll della pagina: la track orizzontale tiene la chip attiva nella metà sinistra.
- * - Overflow: niente scrollbar; fade laterali + frecce.
+ * Chip sezioni — sincronizzate con l’indice del carosello (non scroll spy verticale).
  */
 import { useEffect, useRef, useState } from 'react'
-import { SECTION_IDS, SECTION_LINKS } from '../data/nav'
+import { sectionsForLevel } from '../data/nav'
+import { useDemo } from '../context/DemoContext'
+import { NewFeatureBadge } from './NewFeatureBadge'
 
-const links = SECTION_LINKS
-const sectionIds = SECTION_IDS
-const SCROLL_STEP = 180
-
-function stickyOffset() {
-  const styles = getComputedStyle(document.documentElement)
-  const chromeH =
-    Number.parseFloat(styles.getPropertyValue('--chrome-h')) ||
-    Number.parseFloat(styles.getPropertyValue('--header-h')) ||
-    100
-  const stickyGap =
-    Number.parseFloat(styles.getPropertyValue('--sticky-gap')) || 8
-  return chromeH + stickyGap
+type Props = {
+  activeId: string
+  onSelect: (id: string) => void
 }
 
-function resolveActiveId() {
-  const offset = stickyOffset()
-  let current = sectionIds[0]
-
-  for (const id of sectionIds) {
-    const el = document.getElementById(id)
-    if (!el) continue
-    if (el.getBoundingClientRect().top <= offset) {
-      current = id
-    }
-  }
-
-  return current
-}
-
-function Chevron({ dir }: { dir: 'left' | 'right' }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <path
-        d={dir === 'left' ? 'M9 2 L4 7 L9 12' : 'M5 2 L10 7 L5 12'}
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-      />
-    </svg>
-  )
-}
-
-export function SectionNav() {
-  const [activeId, setActiveId] = useState(sectionIds[0])
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-  const lockedId = useRef<string | null>(null)
-  const unlockTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+export function SectionNav({ activeId, onSelect }: Props) {
+  const { level, area } = useDemo()
+  const links = sectionsForLevel(level, area)
   const scrollerRef = useRef<HTMLDivElement>(null)
-  const chipRefs = useRef<Record<string, HTMLAnchorElement | null>>({})
+  const [canLeft, setCanLeft] = useState(false)
+  const [canRight, setCanRight] = useState(false)
 
-  const syncOverflow = () => {
-    const scroller = scrollerRef.current
-    if (!scroller) return
-    const { scrollLeft, scrollWidth, clientWidth } = scroller
-    setCanScrollLeft(scrollLeft > 2)
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2)
+  const syncFade = () => {
+    const el = scrollerRef.current
+    if (!el) return
+    setCanLeft(el.scrollLeft > 4)
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
   }
 
   useEffect(() => {
-    const clearUnlockTimer = () => {
-      if (unlockTimer.current !== null) {
-        clearTimeout(unlockTimer.current)
-        unlockTimer.current = null
+    syncFade()
+    const el = scrollerRef.current
+    if (!el) return
+    el.addEventListener('scroll', syncFade, { passive: true })
+    const ro = new ResizeObserver(syncFade)
+    ro.observe(el)
+
+    // Wheel/trackpad + drag sulla riga chip → scroll orizzontale (non solo scrollbar).
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth + 1) return
+      const absX = Math.abs(e.deltaX)
+      const absY = Math.abs(e.deltaY)
+      if (absX < 0.5 && absY < 0.5) return
+      // Verticale→orizzontale sui chip, un po’ smorzato.
+      const delta = absX >= absY ? e.deltaX : e.deltaY * 0.55
+      const next = el.scrollLeft + delta
+      const max = el.scrollWidth - el.clientWidth
+      if (next <= 0 && el.scrollLeft <= 0 && delta < 0) return
+      if (next >= max && el.scrollLeft >= max - 1 && delta > 0) return
+      e.preventDefault()
+      el.scrollLeft = Math.max(0, Math.min(max, next))
+    }
+
+    let pid: number | null = null
+    let startX = 0
+    let startScroll = 0
+    let dragged = false
+
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return
+      pid = e.pointerId
+      startX = e.clientX
+      startScroll = el.scrollLeft
+      dragged = false
+    }
+    const onMove = (e: PointerEvent) => {
+      if (pid !== e.pointerId) return
+      const dx = e.clientX - startX
+      if (Math.abs(dx) < 6) return
+      dragged = true
+      el.scrollLeft = startScroll - dx
+    }
+    const onUp = (e: PointerEvent) => {
+      if (pid !== e.pointerId) return
+      pid = null
+      if (!dragged) return
+      const suppress = (ev: Event) => {
+        ev.preventDefault()
+        ev.stopPropagation()
+        el.removeEventListener('click', suppress, true)
       }
+      el.addEventListener('click', suppress, true)
+      window.setTimeout(() => el.removeEventListener('click', suppress, true), 0)
     }
 
-    const unlock = () => {
-      lockedId.current = null
-      clearUnlockTimer()
-      setActiveId(resolveActiveId())
-    }
-
-    const scheduleUnlock = () => {
-      clearUnlockTimer()
-      unlockTimer.current = setTimeout(unlock, 400)
-    }
-
-    const syncActive = () => {
-      if (lockedId.current) {
-        scheduleUnlock()
-        return
-      }
-      setActiveId(resolveActiveId())
-    }
-
-    const onScrollEnd = () => {
-      if (!lockedId.current) return
-      unlock()
-    }
-
-    setActiveId(resolveActiveId())
-    window.addEventListener('scroll', syncActive, { passive: true })
-    window.addEventListener('hashchange', syncActive)
-    window.addEventListener('scrollend', onScrollEnd)
+    el.addEventListener('wheel', onWheel, { passive: false })
+    el.addEventListener('pointerdown', onDown)
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerup', onUp)
+    el.addEventListener('pointercancel', onUp)
 
     return () => {
-      clearUnlockTimer()
-      window.removeEventListener('scroll', syncActive)
-      window.removeEventListener('hashchange', syncActive)
-      window.removeEventListener('scrollend', onScrollEnd)
-    }
-  }, [])
-
-  useEffect(() => {
-    const scroller = scrollerRef.current
-    if (!scroller) return
-
-    syncOverflow()
-    scroller.addEventListener('scroll', syncOverflow, { passive: true })
-    window.addEventListener('resize', syncOverflow)
-
-    const ro = new ResizeObserver(syncOverflow)
-    ro.observe(scroller)
-
-    return () => {
-      scroller.removeEventListener('scroll', syncOverflow)
-      window.removeEventListener('resize', syncOverflow)
+      el.removeEventListener('scroll', syncFade)
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('pointerdown', onDown)
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerup', onUp)
+      el.removeEventListener('pointercancel', onUp)
       ro.disconnect()
     }
-  }, [])
+  }, [links])
 
   useEffect(() => {
-    const scroller = scrollerRef.current
-    const chip = chipRefs.current[activeId]
-    if (!scroller || !chip) return
-
-    const target =
-      chip.offsetLeft - scroller.clientWidth * 0.25 + chip.offsetWidth / 2
-    const maxScroll = scroller.scrollWidth - scroller.clientWidth
-    const nextLeft = Math.max(0, Math.min(target, maxScroll))
-
-    if (Math.abs(scroller.scrollLeft - nextLeft) < 2) {
-      syncOverflow()
-      return
-    }
-
-    scroller.scrollTo({
-      left: nextLeft,
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 'auto'
-        : 'smooth',
-    })
-
-    const t = window.setTimeout(syncOverflow, 350)
-    return () => clearTimeout(t)
+    const el = scrollerRef.current
+    if (!el) return
+    const chip = el.querySelector<HTMLElement>(`[data-section="${activeId}"]`)
+    chip?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
   }, [activeId])
 
-  const handleClick = (id: string) => {
-    lockedId.current = id
-    setActiveId(id)
-  }
-
-  const nudge = (dir: -1 | 1) => {
-    const scroller = scrollerRef.current
-    if (!scroller) return
-    scroller.scrollBy({
-      left: dir * SCROLL_STEP,
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 'auto'
-        : 'smooth',
-    })
-  }
-
   return (
-    <nav className="section-nav border-b border-line bg-bg" aria-label="Sezioni">
-      <div className="section-nav__shell relative mx-auto max-w-report">
+    <nav className="section-nav border-b border-line" aria-label="Sezioni">
+      <div className="relative mx-auto max-w-report px-5 py-2.5">
+        <div
+          className={`section-nav__fade section-nav__fade--left${canLeft ? ' is-visible' : ''}`}
+        />
+        <div
+          className={`section-nav__fade section-nav__fade--right${canRight ? ' is-visible' : ''}`}
+        />
+        <button
+          type="button"
+          className={`section-nav__arrow section-nav__arrow--left${canLeft ? ' is-visible' : ''}`}
+          aria-label="Scorri chip a sinistra"
+          disabled={!canLeft}
+          onClick={() =>
+            scrollerRef.current?.scrollBy({ left: -160, behavior: 'smooth' })
+          }
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          className={`section-nav__arrow section-nav__arrow--right${canRight ? ' is-visible' : ''}`}
+          aria-label="Scorri chip a destra"
+          disabled={!canRight}
+          onClick={() =>
+            scrollerRef.current?.scrollBy({ left: 160, behavior: 'smooth' })
+          }
+        >
+          ›
+        </button>
         <div
           ref={scrollerRef}
-          className="section-nav__scroller box-border flex items-center gap-1 overflow-x-auto px-5 py-3"
+          className="section-nav__scroller flex gap-2 overflow-x-auto py-0.5"
         >
           {links.map((link) => {
-            const id = link.href.slice(1)
-            const isActive = activeId === id
+            const active = link.id === activeId
+            const isNew = link.introducedIn === level
             return (
-              <a
-                key={link.href}
-                ref={(el) => {
-                  chipRefs.current[id] = el
-                }}
-                href={link.href}
-                className={`shrink-0 rounded-sm border px-3 py-2 text-chip font-medium no-underline transition-colors duration-150 ${
-                  isActive
-                    ? 'is-active border-accent bg-transparent text-accent'
-                    : 'border-transparent bg-transparent text-muted hover:bg-bg-warm hover:text-ink'
+              <button
+                key={link.id}
+                type="button"
+                data-section={link.id}
+                className={`shrink-0 rounded-sm border px-3 py-2 text-chip whitespace-nowrap transition-colors ${
+                  active
+                    ? 'border-accent text-accent'
+                    : isNew
+                      ? 'border-[var(--level-accent)] text-[var(--level-accent)]'
+                      : 'border-line text-ink hover:border-ink'
                 }`}
-                aria-current={isActive ? 'true' : undefined}
-                onClick={() => handleClick(id)}
+                style={
+                  isNew && !active
+                    ? { background: 'var(--level-accent-soft)' }
+                    : undefined
+                }
+                aria-current={active ? 'true' : undefined}
+                onClick={() => onSelect(link.id)}
               >
-                {link.label}
-              </a>
+                <span className="inline-flex items-center gap-2">
+                  {link.label}
+                  {isNew ? <NewFeatureBadge level={level} compact /> : null}
+                </span>
+              </button>
             )
           })}
         </div>
-
-        <div
-          className={`section-nav__fade section-nav__fade--left${canScrollLeft ? ' is-visible' : ''}`}
-          aria-hidden
-        />
-        <div
-          className={`section-nav__fade section-nav__fade--right${canScrollRight ? ' is-visible' : ''}`}
-          aria-hidden
-        />
-
-        <button
-          type="button"
-          className={`section-nav__arrow section-nav__arrow--left${canScrollLeft ? ' is-visible' : ''}`}
-          aria-label="Sezioni precedenti"
-          tabIndex={canScrollLeft ? 0 : -1}
-          disabled={!canScrollLeft}
-          onClick={() => nudge(-1)}
-        >
-          <Chevron dir="left" />
-        </button>
-        <button
-          type="button"
-          className={`section-nav__arrow section-nav__arrow--right${canScrollRight ? ' is-visible' : ''}`}
-          aria-label="Sezioni successive"
-          tabIndex={canScrollRight ? 0 : -1}
-          disabled={!canScrollRight}
-          onClick={() => nudge(1)}
-        >
-          <Chevron dir="right" />
-        </button>
       </div>
     </nav>
   )
